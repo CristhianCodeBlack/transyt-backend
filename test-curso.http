@@ -1,0 +1,13 @@
+### Test crear curso
+POST http://localhost:8080/api/cursos
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "titulo": "Curso de Prueba",
+  "descripcion": "Este es un curso de prueba para verificar que funciona correctamente"
+}
+
+### Test listar cursos
+GET http://localhost:8080/api/cursos
+Authorization: Bearer YOUR_TOKEN_HERE

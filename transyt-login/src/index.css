@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ocultar scrollbar pero mantener funcionalidad */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Prevenir overflow horizontal */
+body {
+  overflow-x: hidden;
+}
+
+/* Navbar responsive */
+.navbar-container {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
