@@ -31,4 +31,4 @@ EXPOSE 8080
 ENV SPRING_PROFILES_ACTIVE=prod
 
 # Ejecutar aplicación con nombre específico del JAR
-CMD ["java", "-Dserver.port=$PORT", "-jar", "target/backend-0.0.1-SNAPSHOT.jar"]
+CMD ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar target/backend-0.0.1-SNAPSHOT.jar"]
