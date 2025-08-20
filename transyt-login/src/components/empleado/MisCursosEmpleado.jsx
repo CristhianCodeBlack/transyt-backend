@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Play, CheckCircle, Clock, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 import CursoViewer from './CursoViewer';
 
 const MisCursosEmpleado = () => {
@@ -14,18 +15,8 @@ const MisCursosEmpleado = () => {
 
   const loadCursos = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/curso-usuario/mis-cursos', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCursos(data);
-      } else {
-        throw new Error('Error al cargar cursos');
-      }
+      const response = await api.get('/curso-usuario/mis-cursos');
+      setCursos(response.data);
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al cargar mis cursos');
@@ -41,33 +32,19 @@ const MisCursosEmpleado = () => {
   const handleGenerarCertificado = async (cursoId) => {
     try {
       // Intentar con endpoint normal primero
-      let response = await fetch(`http://localhost:8080/api/certificados/generar/${cursoId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      // Si falla, intentar con endpoint simple
-      if (!response.ok) {
-        response = await fetch(`http://localhost:8080/api/certificados/generar-simple/${cursoId}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+      let response;
+      try {
+        response = await api.post(`/certificados/generar/${cursoId}`);
+      } catch (error) {
+        // Si falla, intentar con endpoint simple
+        response = await api.post(`/certificados/generar-simple/${cursoId}`);
       }
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          toast.success('🏆 ¡Certificado generado exitosamente!');
-          loadCursos(); // Recargar para actualizar estado
-        } else {
-          toast.error(data.error || 'Error al generar certificado');
-        }
+      if (response.data.success) {
+        toast.success('🏆 ¡Certificado generado exitosamente!');
+        loadCursos(); // Recargar para actualizar estado
       } else {
-        toast.error('Error al generar certificado');
+        toast.error(response.data.error || 'Error al generar certificado');
       }
     } catch (error) {
       console.error('Error:', error);

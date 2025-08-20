@@ -1,7 +1,9 @@
 package com.capacitapro.backend.controller;
 
+import com.capacitapro.backend.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,9 @@ import java.util.UUID;
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"})
 public class FileUploadController {
 
+    private final CloudinaryService cloudinaryService;
+    private final Environment environment;
+    
     @Value("${file.upload.upload-dir:uploads/}")
     private String uploadDir;
     
@@ -36,36 +41,72 @@ public class FileUploadController {
                 return ResponseEntity.badRequest().body(Map.of("error", "El archivo está vacío"));
             }
 
-            // Crear directorio si no existe
-            Path uploadPath = Paths.get(uploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
+            // Verificar si estamos en producción
+            boolean isProduction = "prod".equals(environment.getProperty("spring.profiles.active"));
+            
+            if (isProduction) {
+                // Usar Cloudinary en producción
+                return uploadToCloudinary(file);
+            } else {
+                // Usar almacenamiento local en desarrollo
+                return uploadToLocal(file);
             }
 
-            // Generar nombre único para el archivo
-            String originalFilename = file.getOriginalFilename();
-            String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String uniqueFilename = UUID.randomUUID().toString() + extension;
-
-            // Guardar archivo
-            Path filePath = uploadPath.resolve(uniqueFilename);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            // Respuesta
-            Map<String, Object> response = new HashMap<>();
-            response.put("filename", uniqueFilename);
-            response.put("originalName", originalFilename);
-            response.put("size", file.getSize());
-            response.put("contentType", file.getContentType());
-            response.put("url", baseUrl + "/api/files/preview/" + uniqueFilename);
-            response.put("downloadUrl", baseUrl + "/api/files/download/" + uniqueFilename);
-
-            return ResponseEntity.ok(response);
-
-        } catch (IOException e) {
+        } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "Error al subir el archivo: " + e.getMessage()));
         }
+    }
+    
+    private ResponseEntity<Map<String, Object>> uploadToCloudinary(MultipartFile file) throws IOException {
+        String folder = "transyt/" + (file.getContentType().startsWith("video/") ? "videos" : "files");
+        
+        Map<String, Object> uploadResult;
+        if (file.getContentType().startsWith("video/")) {
+            uploadResult = cloudinaryService.uploadVideo(file, folder);
+        } else {
+            uploadResult = cloudinaryService.uploadFile(file, folder);
+        }
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("filename", uploadResult.get("public_id"));
+        response.put("originalName", file.getOriginalFilename());
+        response.put("size", file.getSize());
+        response.put("contentType", file.getContentType());
+        response.put("url", uploadResult.get("secure_url"));
+        response.put("downloadUrl", uploadResult.get("secure_url"));
+        response.put("cloudinary", true);
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    private ResponseEntity<Map<String, Object>> uploadToLocal(MultipartFile file) throws IOException {
+        // Crear directorio si no existe
+        Path uploadPath = Paths.get(uploadDir);
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+
+        // Generar nombre único para el archivo
+        String originalFilename = file.getOriginalFilename();
+        String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        String uniqueFilename = UUID.randomUUID().toString() + extension;
+
+        // Guardar archivo
+        Path filePath = uploadPath.resolve(uniqueFilename);
+        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+        // Respuesta
+        Map<String, Object> response = new HashMap<>();
+        response.put("filename", uniqueFilename);
+        response.put("originalName", originalFilename);
+        response.put("size", file.getSize());
+        response.put("contentType", file.getContentType());
+        response.put("url", baseUrl + "/api/files/preview/" + uniqueFilename);
+        response.put("downloadUrl", baseUrl + "/api/files/download/" + uniqueFilename);
+        response.put("cloudinary", false);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/download/{filename}")

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Plus, Trash2, Users, BookOpen, FileText, User, Upload, ClipboardList } from 'lucide-react';
 import { cursoService } from '../../services/cursoService';
 import { usuariosAdminService } from '../../services/dashboardService';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 import TestQuestionsModal from './TestQuestionsModal';
 
@@ -64,15 +65,8 @@ const CursoModal = ({ curso, onClose }) => {
       
       // Cargar usuarios asignados al curso
       try {
-        const response = await fetch(`/api/cursos/${curso.id}/usuarios`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (response.ok) {
-          const usuariosData = await response.json();
-          setUsuariosAsignados(usuariosData || []);
-        }
+        const response = await api.get(`/cursos/${curso.id}/usuarios`);
+        setUsuariosAsignados(response.data || []);
       } catch (error) {
         console.log('No hay usuarios asignados a este curso');
         setUsuariosAsignados([]);
@@ -80,15 +74,8 @@ const CursoModal = ({ curso, onClose }) => {
       
       // Cargar instructor asignado
       try {
-        const response = await fetch(`/api/cursos/${curso.id}/instructor`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (response.ok) {
-          const instructorData = await response.json();
-          setInstructorAsignado(instructorData);
-        }
+        const response = await api.get(`/cursos/${curso.id}/instructor`);
+        setInstructorAsignado(response.data);
       } catch (error) {
         console.log('No hay instructor asignado a este curso');
         setInstructorAsignado(null);
@@ -97,16 +84,9 @@ const CursoModal = ({ curso, onClose }) => {
       // Cargar tests del curso SOLO si no hay tests locales
       if (tests.length === 0) {
         try {
-          const response = await fetch(`/api/evaluaciones/curso/${curso.id}`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-          if (response.ok) {
-            const testsData = await response.json();
-            console.log('Tests cargados del servidor:', testsData);
-            setTests(testsData || []);
-          }
+          const response = await api.get(`/evaluaciones/curso/${curso.id}`);
+          console.log('Tests cargados del servidor:', response.data);
+          setTests(response.data || []);
         } catch (error) {
           console.log('No hay tests para este curso');
           setTests([]);
@@ -132,15 +112,8 @@ const CursoModal = ({ curso, onClose }) => {
 
   const loadEmpresas = async () => {
     try {
-      const response = await fetch('/api/empresas', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setEmpresas(data);
-      }
+      const response = await api.get('/empresas');
+      setEmpresas(response.data);
     } catch (error) {
       console.error('Error loading empresas:', error);
       // Si no se pueden cargar empresas, usar empresa por defecto
@@ -263,29 +236,11 @@ const CursoModal = ({ curso, onClose }) => {
             
             console.log('CREANDO test nuevo:', testCompleto);
             
-            const response = await fetch('http://localhost:8080/api/evaluaciones/simple', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(testCompleto)
-            });
+            const response = await api.post('/evaluaciones/simple', testCompleto);
+            console.log('Test nuevo creado:', response.data);
             
-            if (response.ok) {
-              const responseText = await response.text();
-              console.log('Test nuevo creado:', responseText);
-              
-              // Marcar el test como no-nuevo para evitar duplicación
-              test.isNew = false;
-              // Extraer ID del response si es posible
-              const match = responseText.match(/ID: (\d+)/);
-              if (match) {
-                test.id = parseInt(match[1]);
-              }
-            } else {
-              const errorText = await response.text();
-              console.error('Error creando test:', errorText);
-            }
+            // Marcar el test como no-nuevo para evitar duplicación
+            test.isNew = false;
             
           } else if (esTestExistente) {
             // ACTUALIZAR TEST EXISTENTE (solo preguntas)
@@ -296,24 +251,11 @@ const CursoModal = ({ curso, onClose }) => {
             
             console.log('ACTUALIZANDO preguntas del test:', updateData);
             
-            const response = await fetch('http://localhost:8080/api/evaluaciones/actualizar-preguntas', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(updateData)
-            });
+            const response = await api.post('/evaluaciones/actualizar-preguntas', updateData);
+            console.log('Preguntas actualizadas:', response.data);
             
-            if (response.ok) {
-              const responseText = await response.text();
-              console.log('Preguntas actualizadas:', responseText);
-              
-              // Limpiar bandera de cambios
-              test.hasChanges = false;
-            } else {
-              const errorText = await response.text();
-              console.error('Error actualizando preguntas:', errorText);
-            }
+            // Limpiar bandera de cambios
+            test.hasChanges = false;
           }
           
         } catch (error) {
@@ -427,19 +369,13 @@ const CursoModal = ({ curso, onClose }) => {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await fetch('/api/files/upload', {
-        method: 'POST',
+      const response = await api.post('/files/upload', formData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Content-Type': 'multipart/form-data',
         },
-        body: formData
       });
       
-      if (!response.ok) {
-        throw new Error('Error al subir archivo');
-      }
-      
-      const result = await response.json();
+      const result = response.data;
       
       // Guardar la información del archivo en el submódulo
       updateSubmodulo(moduloId, submoduloId, 'archivo', {
@@ -504,22 +440,9 @@ const CursoModal = ({ curso, onClose }) => {
     if (test.id && !test.isNew) {
       try {
         console.log('Eliminando del servidor test ID:', test.id);
-        const response = await fetch(`http://localhost:8080/api/evaluaciones/${test.id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        
-        if (response.ok) {
-          console.log('Test eliminado del servidor exitosamente');
-          toast.success('Test eliminado exitosamente');
-        } else {
-          const errorText = await response.text();
-          console.error('Error eliminando test del servidor:', errorText);
-          toast.error('Error al eliminar test del servidor');
-          return; // No eliminar del frontend si falló en el backend
-        }
+        await api.delete(`/evaluaciones/${test.id}`);
+        console.log('Test eliminado del servidor exitosamente');
+        toast.success('Test eliminado exitosamente');
       } catch (error) {
         console.error('Error eliminando test:', error);
         toast.error('Error al eliminar test');
@@ -953,16 +876,9 @@ const CursoModal = ({ curso, onClose }) => {
                     onClick={async () => {
                       if (curso?.id) {
                         try {
-                          const response = await fetch(`/api/evaluaciones/curso/${curso.id}`, {
-                            headers: {
-                              'Authorization': `Bearer ${localStorage.getItem('token')}`
-                            }
-                          });
-                          if (response.ok) {
-                            const testsData = await response.json();
-                            setTests(testsData || []);
-                            toast.success('Tests recargados');
-                          }
+                          const response = await api.get(`/evaluaciones/curso/${curso.id}`);
+                          setTests(response.data || []);
+                          toast.success('Tests recargados');
                         } catch (error) {
                           toast.error('Error recargando tests');
                         }

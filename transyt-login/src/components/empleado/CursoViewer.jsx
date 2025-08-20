@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Play, CheckCircle, FileText, Video, Clock, Award, BookOpen, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 import offlineService from '../../services/offlineService';
 import ResponderEvaluacion from '../evaluaciones/ResponderEvaluacion';
 
@@ -54,30 +55,12 @@ const CursoViewer = ({ cursoId, onBack }) => {
         }
       } else {
         // Cargar desde servidor
-        const response = await fetch(`http://localhost:8080/api/modulo-progreso/curso/${cursoId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+        const response = await api.get(`/modulo-progreso/curso/${cursoId}`);
+        data = response.data;
         
-        if (!response.ok) {
-          // Si falla, intentar cargar desde caché
-          const cachedData = offlineService.getCachedCourse(cursoId);
-          if (cachedData) {
-            data = cachedData;
-            toast('⚠️ Usando versión offline del curso', {
-              duration: 4000,
-              icon: '💾'
-            });
-          } else {
-            throw new Error('Error al cargar progreso');
-          }
-        } else {
-          data = await response.json();
-          console.log('Datos del progreso cargados desde servidor:', data);
-          console.log('Número de módulos:', data.modulos?.length);
-          console.log('Progreso general:', data.progresoGeneral + '%');
-        }
+        console.log('Datos del progreso cargados desde servidor:', data);
+        console.log('Número de módulos:', data.modulos?.length);
+        console.log('Progreso general:', data.progresoGeneral + '%');
       }
       
       console.log('Estableciendo progreso del curso:', data);
@@ -107,16 +90,8 @@ const CursoViewer = ({ cursoId, onBack }) => {
 
   const handleIniciarModulo = async (moduloId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/modulo-progreso/modulo/${moduloId}/iniciar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        loadProgresoCurso(); // Recargar progreso
-      }
+      await api.post(`/modulo-progreso/modulo/${moduloId}/iniciar`);
+      loadProgresoCurso(); // Recargar progreso
     } catch (error) {
       console.error('Error:', error);
     }
@@ -144,16 +119,9 @@ const CursoViewer = ({ cursoId, onBack }) => {
         return;
       }
       
-      const response = await fetch(`http://localhost:8080/api/modulo-progreso/modulo/${moduloId}/completar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      await api.post(`/modulo-progreso/modulo/${moduloId}/completar`);
       
       toast.dismiss(loadingToast);
-      
-      if (response.ok) {
         toast.success('🎊 ¡Módulo completado exitosamente!', {
           duration: 4000,
           icon: '🏅'
@@ -162,14 +130,8 @@ const CursoViewer = ({ cursoId, onBack }) => {
         await loadProgresoCurso(); // Recargar progreso
         
         // Verificar si el curso se completó y mostrar notificación de certificado
-        const updatedResponse = await fetch(`http://localhost:8080/api/modulo-progreso/curso/${cursoId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        
-        if (updatedResponse.ok) {
-          const updatedData = await updatedResponse.json();
+        const updatedResponse = await api.get(`/modulo-progreso/curso/${cursoId}`);
+        const updatedData = updatedResponse.data;
           if (updatedData.progresoGeneral >= 100) {
 
             // Mostrar celebración especial para completar el curso
@@ -210,10 +172,6 @@ const CursoViewer = ({ cursoId, onBack }) => {
               }, 1500);
             }
           }
-        }
-      } else {
-        toast.error('❌ Error al completar módulo. Inténtalo nuevamente.');
-      }
     } catch (error) {
       console.error('Error:', error);
       toast.error('❌ Error de conexión al completar módulo');
@@ -259,28 +217,9 @@ const CursoViewer = ({ cursoId, onBack }) => {
       }
       
       // Usar la API existente que funciona
-      const response = await fetch(`http://localhost:8080/api/modulo-progreso/submodulo/${submoduloId}/marcar-visto`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      await api.post(`/modulo-progreso/submodulo/${submoduloId}/marcar-visto`);
       
       toast.dismiss(loadingToast);
-      
-      if (response.ok) {
-        // Intentar parsear como JSON, si falla usar como texto
-        let data;
-        try {
-          const responseText = await response.text();
-          if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
-            data = JSON.parse(responseText);
-          } else {
-            data = { success: true, message: responseText };
-          }
-        } catch (e) {
-          data = { success: true, message: 'Completado' };
-        }
         
         console.log('Submódulo marcado como completado exitosamente');
         toast.success('🎉 ¡Elemento completado exitosamente!', {
@@ -295,15 +234,8 @@ const CursoViewer = ({ cursoId, onBack }) => {
         // DEBUG: Ver datos del módulo en el backend
         console.log('=== DEBUG MÓDULO BACKEND ===');
         try {
-          const debugResponse = await fetch(`http://localhost:8080/api/modulo-progreso/debug/modulo/${moduloActivo?.id}`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-          if (debugResponse.ok) {
-            const debugData = await debugResponse.json();
-            console.log('Datos del módulo en backend:', debugData);
-          }
+          const debugResponse = await api.get(`/modulo-progreso/debug/modulo/${moduloActivo?.id}`);
+          console.log('Datos del módulo en backend:', debugResponse.data);
         } catch (error) {
           console.error('Error en debug:', error);
         }
@@ -320,7 +252,6 @@ const CursoViewer = ({ cursoId, onBack }) => {
             duration: 2000
           });
         }, 500);
-      }
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al marcar elemento como completado');
@@ -345,17 +276,11 @@ const CursoViewer = ({ cursoId, onBack }) => {
       
       if (todosSubmodulosCompletados) {
         // Buscar evaluación del módulo
-        const response = await fetch(`http://localhost:8080/api/evaluaciones/modulo/${moduloActivo.id}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+        const response = await api.get(`/evaluaciones/modulo/${moduloActivo.id}`);
         
-        console.log('Respuesta evaluaciones:', response.status);
-        
-        if (response.ok) {
-          const evaluaciones = await response.json();
-          console.log('Evaluaciones encontradas:', evaluaciones);
+        console.log('Respuesta evaluaciones: OK');
+        const evaluaciones = response.data;
+        console.log('Evaluaciones encontradas:', evaluaciones);
           
           if (evaluaciones && evaluaciones.length > 0) {
             // Hay evaluación, mostrarla
@@ -370,9 +295,6 @@ const CursoViewer = ({ cursoId, onBack }) => {
           } else {
             console.log('No hay evaluaciones para este módulo');
           }
-        } else {
-          console.log('Error al obtener evaluaciones:', response.status);
-        }
       }
     } catch (error) {
       console.error('Error verificando evaluación:', error);
@@ -381,22 +303,17 @@ const CursoViewer = ({ cursoId, onBack }) => {
 
   const handleCompletarEvaluacion = async (evaluacionId, puntajeObtenido, puntajeMaximo) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/modulo-progreso/evaluacion/${evaluacionId}/completar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: `puntajeObtenido=${puntajeObtenido}&puntajeMaximo=${puntajeMaximo}`
-      });
+      const response = await api.post(`/modulo-progreso/evaluacion/${evaluacionId}/completar`, 
+        `puntajeObtenido=${puntajeObtenido}&puntajeMaximo=${puntajeMaximo}`,
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        }
+      );
       
-      if (response.ok) {
-        const mensaje = await response.text();
-        toast.success(mensaje);
-        loadProgresoCurso(); // Recargar progreso
-      } else {
-        toast.error('Error al registrar evaluación');
-      }
+      toast.success(response.data);
+      loadProgresoCurso(); // Recargar progreso
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al registrar evaluación');
@@ -933,32 +850,20 @@ const CursoViewer = ({ cursoId, onBack }) => {
                             console.log('Submódulo activo:', submoduloActivo?.id);
                             
                             try {
-                              const response = await fetch(`http://localhost:8080/api/evaluaciones/modulo/${moduloActivo.id}`, {
-                                headers: {
-                                  'Authorization': `Bearer ${localStorage.getItem('token')}`
-                                }
-                              });
+                              const response = await api.get(`/evaluaciones/modulo/${moduloActivo.id}`);
                               
-                              console.log('Respuesta API evaluaciones:', response.status);
+                              console.log('Respuesta API evaluaciones: OK');
+                              const evaluaciones = response.data;
+                              console.log('Evaluaciones obtenidas:', evaluaciones);
                               
-                              if (response.ok) {
-                                const evaluaciones = await response.json();
-                                console.log('Evaluaciones obtenidas:', evaluaciones);
-                                
-                                if (evaluaciones && evaluaciones.length > 0) {
-                                  console.log('Abriendo evaluación:', evaluaciones[0]);
-                                  setEvaluacionActiva(evaluaciones[0]);
-                                  setShowEvaluacion(true);
-                                  toast.success('📝 Abriendo evaluación');
-                                } else {
-                                  console.log('No hay evaluaciones para este módulo');
-                                  toast('No hay evaluación para este módulo', { icon: 'ℹ️' });
-                                }
+                              if (evaluaciones && evaluaciones.length > 0) {
+                                console.log('Abriendo evaluación:', evaluaciones[0]);
+                                setEvaluacionActiva(evaluaciones[0]);
+                                setShowEvaluacion(true);
+                                toast.success('📝 Abriendo evaluación');
                               } else {
-                                console.error('Error en respuesta:', response.status, response.statusText);
-                                const errorText = await response.text();
-                                console.error('Error details:', errorText);
-                                toast.error('Error al cargar evaluación');
+                                console.log('No hay evaluaciones para este módulo');
+                                toast('No hay evaluación para este módulo', { icon: 'ℹ️' });
                               }
                             } catch (error) {
                               console.error('Error completo:', error);

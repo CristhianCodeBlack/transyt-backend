@@ -8,12 +8,15 @@ export default defineConfig({
     outDir: 'build'
   },
   server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        secure: false,
+    // Proxy solo para desarrollo local
+    ...(process.env.NODE_ENV !== 'production' && {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+          secure: false,
+        },
       },
-    },
+    }),
   },
 })

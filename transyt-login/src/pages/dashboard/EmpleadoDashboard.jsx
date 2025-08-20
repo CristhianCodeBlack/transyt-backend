@@ -38,26 +38,17 @@ const EmpleadoDashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/empleado/dashboard', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+      const response = await api.get('/empleado/dashboard');
+      const data = response.data;
+      setStats({
+        cursosAsignados: data.cursosAsignados,
+        cursosCompletados: data.cursosCompletados,
+        certificadosObtenidos: data.certificadosObtenidos,
+        evaluacionesAprobadas: data.evaluacionesAprobadas,
+        progresoGeneral: data.progresoGeneral
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setStats({
-          cursosAsignados: data.cursosAsignados,
-          cursosCompletados: data.cursosCompletados,
-          certificadosObtenidos: data.certificadosObtenidos,
-          evaluacionesAprobadas: data.evaluacionesAprobadas,
-          progresoGeneral: data.progresoGeneral
-        });
-        setCursosRecientes(data.cursosRecientes || []);
-        setCapacitacionesProximas(data.capacitacionesProximas || []);
-      } else {
-        throw new Error('Error al cargar datos');
-      }
+      setCursosRecientes(data.cursosRecientes || []);
+      setCapacitacionesProximas(data.capacitacionesProximas || []);
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al cargar datos del dashboard');
