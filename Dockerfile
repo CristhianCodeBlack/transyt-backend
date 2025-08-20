@@ -12,6 +12,9 @@ COPY pom.xml .
 COPY mvnw .
 COPY .mvn .mvn
 
+# Dar permisos a mvnw
+RUN chmod +x ./mvnw
+
 # Descargar dependencias
 RUN ./mvnw dependency:go-offline -B
 
@@ -19,7 +22,7 @@ RUN ./mvnw dependency:go-offline -B
 COPY src src
 
 # Construir aplicación
-RUN ./mvnw clean package -DskipTests
+RUN ./mvnw clean package -DskipTests -q
 
 # Exponer puerto
 EXPOSE 8080
