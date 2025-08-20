@@ -1,5 +1,5 @@
 # Dockerfile para Spring Boot
-FROM openjdk:17-jdk-slim
+FROM openjdk:21-jdk-slim
 
 # Instalar herramientas necesarias
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
