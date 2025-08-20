@@ -30,5 +30,5 @@ EXPOSE 8080
 # Variables de entorno para producción
 ENV SPRING_PROFILES_ACTIVE=prod
 
-# Ejecutar aplicación
-CMD ["java", "-Dserver.port=$PORT", "-jar", "target/*.jar"]
+# Ejecutar aplicación con nombre específico del JAR
+CMD ["java", "-Dserver.port=$PORT", "-jar", "target/backend-0.0.1-SNAPSHOT.jar"]
