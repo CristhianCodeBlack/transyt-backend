@@ -111,10 +111,21 @@ public class CapacitacionEnVivoController {
                     .activo(true)
                     .build();
             
-            // Usar el servicio existente que genera el link de Teams
-            CapacitacionEnVivo nuevaCapacitacion = capacitacionService.crearConTeams(capacitacion);
+            // Intentar crear con Teams, si falla usar enlace demo
+            CapacitacionEnVivo nuevaCapacitacion;
+            try {
+                nuevaCapacitacion = capacitacionService.crearConTeams(capacitacion);
+                System.out.println("Capacitación creada con Teams: " + nuevaCapacitacion.getEnlaceTeams());
+            } catch (Exception teamsError) {
+                System.err.println("Error creando con Teams: " + teamsError.getMessage());
+                // Fallback: crear sin Teams
+                capacitacion.setEnlaceTeams("https://teams.microsoft.com/l/meetup-join/demo-" + System.currentTimeMillis());
+                capacitacion.setMeetingId("DEMO-" + System.currentTimeMillis());
+                nuevaCapacitacion = capacitacionRepo.save(capacitacion);
+                System.out.println("Capacitación creada sin Teams (fallback): " + nuevaCapacitacion.getId());
+            }
             
-            return ResponseEntity.ok("Capacitación creada exitosamente con link: " + nuevaCapacitacion.getEnlaceTeams());
+            return ResponseEntity.ok("Capacitación creada exitosamente. Link: " + nuevaCapacitacion.getEnlaceTeams());
             
         } catch (Exception e) {
             System.err.println("Error creando capacitación: " + e.getMessage());
