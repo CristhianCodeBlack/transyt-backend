@@ -72,7 +72,12 @@ public class CapacitacionEnVivoController {
             Authentication authentication) {
         
         try {
+            System.out.println("=== CREANDO CAPACITACIÓN ===");
+            System.out.println("Datos recibidos: " + data);
+            System.out.println("Authentication: " + (authentication != null ? authentication.getName() : "null"));
+            
             Usuario creador = getUsuarioAutenticado(authentication);
+            System.out.println("Usuario creador: " + creador.getNombre() + ", Rol: " + creador.getRol());
             
             if (!creador.getRol().equals("ADMIN") && !creador.getRol().equals("INSTRUCTOR")) {
                 return ResponseEntity.status(403).body("No tiene permisos para crear capacitaciones");

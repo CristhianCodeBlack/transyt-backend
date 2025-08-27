@@ -23,6 +23,9 @@ const CapacitacionesVivo = () => {
       setCapacitaciones(capacitacionesResponse.data);
       
       const cursosResponse = await api.get('/cursos');
+      console.log('=== CURSOS CARGADOS EN CAPACITACIONES ===');
+      console.log('Respuesta:', cursosResponse.data);
+      console.log('Número de cursos:', cursosResponse.data?.length || 0);
       setCursos(cursosResponse.data);
       
     } catch (error) {
@@ -184,6 +187,12 @@ const CapacitacionModal = ({ capacitacion, cursos, onClose, onSave }) => {
     setLoading(true);
     
     try {
+      console.log('=== ENVIANDO CAPACITACIÓN ===');
+      console.log('FormData:', formData);
+      console.log('CursoId tipo:', typeof formData.cursoId);
+      console.log('FechaInicio:', formData.fechaInicio);
+      console.log('FechaFin:', formData.fechaFin);
+      
       const response = await api.post('/capacitaciones-vivo', formData);
       toast.success('Capacitación creada exitosamente');
       onSave();

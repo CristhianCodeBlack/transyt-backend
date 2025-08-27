@@ -1,6 +1,6 @@
 // Constantes de la aplicación
 export const APP_NAME = 'TRANSYT';
-export const VERSION = '1.0.2'; // Incrementar para forzar nuevo build
+export const VERSION = '1.0.3-' + Date.now(); // Forzar nuevo build
 
 // URLs base según el entorno
 export const getApiBaseUrl = () => {
