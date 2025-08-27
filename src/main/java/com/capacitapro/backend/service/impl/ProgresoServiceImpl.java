@@ -2,6 +2,7 @@ package com.capacitapro.backend.service.impl;
 
 import com.capacitapro.backend.dto.ProgresoDTO;
 import com.capacitapro.backend.entity.*;
+import com.capacitapro.backend.event.CursoCompletadoEvent;
 import com.capacitapro.backend.repository.CursoRepository;
 import com.capacitapro.backend.repository.ModuloRepository;
 import com.capacitapro.backend.repository.ModuloProgresoRepository;
@@ -9,10 +10,10 @@ import com.capacitapro.backend.repository.CursoUsuarioRepository;
 import com.capacitapro.backend.repository.EvaluacionRepository;
 import com.capacitapro.backend.repository.EvaluacionUsuarioRepository;
 import com.capacitapro.backend.service.ProgresoService;
-import com.capacitapro.backend.service.CertificadoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -30,7 +31,7 @@ public class ProgresoServiceImpl implements ProgresoService {
     private final CursoUsuarioRepository cursoUsuarioRepository;
     private final EvaluacionRepository evaluacionRepository;
     private final EvaluacionUsuarioRepository evaluacionUsuarioRepository;
-    private final CertificadoService certificadoService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -141,15 +142,10 @@ public class ProgresoServiceImpl implements ProgresoService {
         if (porcentajeProgreso >= 100 && !cursoUsuario.getCompletado()) {
             cursoUsuario.completarCurso();
             
-            // Generar certificado automáticamente
-            try {
-                if (puedeGenerarCertificado(cursoId, usuario)) {
-                    certificadoService.generarCertificado(cursoId, usuario);
-                    System.out.println("✅ Certificado generado automáticamente para " + usuario.getNombre() + " - Curso: " + curso.getTitulo());
-                }
-            } catch (Exception e) {
-                System.err.println("Error generando certificado automático: " + e.getMessage());
-                // No fallar el proceso por error en certificado
+            // Publicar evento para generar certificado (evita dependencia circular)
+            if (puedeGenerarCertificado(cursoId, usuario)) {
+                eventPublisher.publishEvent(new CursoCompletadoEvent(cursoId, usuario.getId()));
+                System.out.println("✅ Evento de curso completado publicado para " + usuario.getNombre());
             }
         }
         
