@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Video, Calendar, Clock, Users, ExternalLink, Edit, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const CapacitacionesVivo = () => {
   const [capacitaciones, setCapacitaciones] = useState([]);
@@ -18,27 +19,11 @@ const CapacitacionesVivo = () => {
     try {
       const empresaId = 1;
       
-      const capacitacionesResponse = await fetch(`http://localhost:8080/api/capacitaciones-vivo/empresa/${empresaId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const capacitacionesResponse = await api.get(`/capacitaciones-vivo/empresa/${empresaId}`);
+      setCapacitaciones(capacitacionesResponse.data);
       
-      if (capacitacionesResponse.ok) {
-        const capacitacionesData = await capacitacionesResponse.json();
-        setCapacitaciones(capacitacionesData);
-      }
-      
-      const cursosResponse = await fetch('http://localhost:8080/api/cursos', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (cursosResponse.ok) {
-        const cursosData = await cursosResponse.json();
-        setCursos(cursosData);
-      }
+      const cursosResponse = await api.get('/cursos');
+      setCursos(cursosResponse.data);
       
     } catch (error) {
       console.error('Error cargando datos:', error);
@@ -199,22 +184,9 @@ const CapacitacionModal = ({ capacitacion, cursos, onClose, onSave }) => {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:8080/api/capacitaciones-vivo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(formData)
-      });
-      
-      if (response.ok) {
-        toast.success('Capacitación creada exitosamente');
-        onSave();
-      } else {
-        const errorText = await response.text();
-        toast.error('Error: ' + errorText);
-      }
+      const response = await api.post('/capacitaciones-vivo', formData);
+      toast.success('Capacitación creada exitosamente');
+      onSave();
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error creando capacitación');

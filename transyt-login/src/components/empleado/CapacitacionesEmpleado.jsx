@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Video, Calendar, Clock, Users, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const CapacitacionesEmpleado = () => {
   const [capacitaciones, setCapacitaciones] = useState([]);
@@ -13,19 +14,8 @@ const CapacitacionesEmpleado = () => {
   const loadCapacitaciones = async () => {
     try {
       const empresaId = 1; // Obtener de contexto/auth
-      const response = await fetch(`http://localhost:8080/api/capacitaciones-vivo/empresa/${empresaId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Filtrar solo capacitaciones de cursos asignados al usuario
-        setCapacitaciones(data);
-      } else {
-        throw new Error('Error al cargar capacitaciones');
-      }
+      const response = await api.get(`/capacitaciones-vivo/empresa/${empresaId}`);
+      setCapacitaciones(response.data);
     } catch (error) {
       console.error('Error:', error);
       toast.error('Error al cargar capacitaciones');

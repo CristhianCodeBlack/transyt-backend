@@ -19,6 +19,7 @@ import {
   FileText
 } from "lucide-react";
 import { authService } from "../services/api";
+import api from "../services/api";
 import toast from "react-hot-toast";
 import logo from "../assets/logo.png";
 import NotificationCenter from "./NotificationCenter";
@@ -41,15 +42,8 @@ const Navbar = () => {
   useEffect(() => {
     const loadCursos = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/cursos', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setCursos(data);
-        }
+        const response = await api.get('/cursos');
+        setCursos(response.data);
       } catch (error) {
         console.error('Error loading courses:', error);
       }
