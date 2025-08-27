@@ -20,7 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/eventos")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "https://transyt-frontend.onrender.com"})
 public class EventoController {
 
     private final EventoRepository eventoRepository;

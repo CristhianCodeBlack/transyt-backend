@@ -9,6 +9,7 @@ import com.capacitapro.backend.repository.CursoUsuarioRepository;
 import com.capacitapro.backend.repository.EvaluacionRepository;
 import com.capacitapro.backend.repository.EvaluacionUsuarioRepository;
 import com.capacitapro.backend.service.ProgresoService;
+import com.capacitapro.backend.service.CertificadoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class ProgresoServiceImpl implements ProgresoService {
     private final CursoUsuarioRepository cursoUsuarioRepository;
     private final EvaluacionRepository evaluacionRepository;
     private final EvaluacionUsuarioRepository evaluacionUsuarioRepository;
+    private final CertificadoService certificadoService;
 
     @Override
     @Transactional(readOnly = true)
@@ -138,6 +140,17 @@ public class ProgresoServiceImpl implements ProgresoService {
         // Marcar como completado si terminó todo
         if (porcentajeProgreso >= 100 && !cursoUsuario.getCompletado()) {
             cursoUsuario.completarCurso();
+            
+            // Generar certificado automáticamente
+            try {
+                if (puedeGenerarCertificado(cursoId, usuario)) {
+                    certificadoService.generarCertificado(cursoId, usuario);
+                    System.out.println("✅ Certificado generado automáticamente para " + usuario.getNombre() + " - Curso: " + curso.getTitulo());
+                }
+            } catch (Exception e) {
+                System.err.println("Error generando certificado automático: " + e.getMessage());
+                // No fallar el proceso por error en certificado
+            }
         }
         
         cursoUsuarioRepository.save(cursoUsuario);

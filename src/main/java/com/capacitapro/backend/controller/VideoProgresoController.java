@@ -7,7 +7,7 @@ package com.capacitapro.backend.controller;
 @RestController
 @RequestMapping("/api/video-progreso")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "https://transyt-frontend.onrender.com"})
 public class VideoProgresoController {
 
     private final SubmoduloProgresoRepository submoduloProgresoRepo;

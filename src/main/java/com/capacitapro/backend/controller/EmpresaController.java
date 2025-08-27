@@ -11,7 +11,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/empresas")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "https://transyt-frontend.onrender.com"})
 public class EmpresaController {
 
     private final EmpresaRepository empresaRepository;

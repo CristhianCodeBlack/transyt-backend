@@ -21,7 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/files")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"})
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "https://transyt-frontend.onrender.com"})
 public class FileUploadController {
 
     private final CloudinaryService cloudinaryService;
@@ -30,7 +30,7 @@ public class FileUploadController {
     @Value("${file.upload.upload-dir:uploads/}")
     private String uploadDir;
     
-    @Value("${file.upload.base-url:http://localhost:8080}")
+    @Value("${file.upload.base-url:${server.base-url:http://localhost:8080}}")
     private String baseUrl;
 
     @PostMapping("/upload")
@@ -146,7 +146,7 @@ public class FileUploadController {
                 if (isPreview) {
                     // Headers para permitir iframe
                     responseBuilder
-                        .header("Content-Security-Policy", "frame-ancestors 'self' http://localhost:5173 http://localhost:5174 http://localhost:5175")
+                        .header("Content-Security-Policy", "frame-ancestors 'self' http://localhost:5173 http://localhost:5174 http://localhost:5175 https://transyt-frontend.onrender.com")
                         .header("Cache-Control", "no-cache, no-store, must-revalidate")
                         .header("Pragma", "no-cache")
                         .header("Expires", "0");
