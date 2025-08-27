@@ -188,12 +188,19 @@ const CapacitacionModal = ({ capacitacion, cursos, onClose, onSave }) => {
     
     try {
       console.log('=== ENVIANDO CAPACITACIÓN ===');
-      console.log('FormData:', formData);
-      console.log('CursoId tipo:', typeof formData.cursoId);
-      console.log('FechaInicio:', formData.fechaInicio);
-      console.log('FechaFin:', formData.fechaFin);
+      console.log('FormData original:', formData);
       
-      const response = await api.post('/capacitaciones-vivo', formData);
+      // Arreglar formato de datos
+      const dataToSend = {
+        ...formData,
+        cursoId: parseInt(formData.cursoId), // Convertir a número
+        fechaInicio: formData.fechaInicio + ':00', // Agregar segundos
+        fechaFin: formData.fechaFin + ':00' // Agregar segundos
+      };
+      
+      console.log('Datos a enviar:', dataToSend);
+      
+      const response = await api.post('/capacitaciones-vivo', dataToSend);
       toast.success('Capacitación creada exitosamente');
       onSave();
     } catch (error) {
