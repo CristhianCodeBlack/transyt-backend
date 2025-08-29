@@ -128,7 +128,10 @@ public class CapacitacionEnVivoController {
             return ResponseEntity.ok("Capacitación creada exitosamente. Link: " + nuevaCapacitacion.getEnlaceTeams());
             
         } catch (Exception e) {
-            System.err.println("Error creando capacitación: " + e.getMessage());
+            System.err.println("=== ERROR CREANDO CAPACITACIÓN ===");
+            System.err.println("Mensaje: " + e.getMessage());
+            System.err.println("Tipo: " + e.getClass().getSimpleName());
+            e.printStackTrace();
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
         }
     }

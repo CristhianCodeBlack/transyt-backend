@@ -26,7 +26,6 @@ public class CapacitacionEnVivo {
     private String descripcion;
     
     @NotNull(message = "La fecha de inicio es obligatoria")
-    @Future(message = "La fecha de inicio debe ser futura")
     private LocalDateTime fechaInicio;
     
     @NotNull(message = "La fecha de fin es obligatoria")
