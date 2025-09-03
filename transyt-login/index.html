@@ -21,25 +21,28 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
+      // TRANSYT Service Worker - Optimizado para conductores
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('SW registered: ', registration);
-              // Actualizar SW si hay una nueva versión
-              registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // Nueva versión disponible, recargar
-                    window.location.reload();
-                  }
-                });
+        window.addEventListener('load', async () => {
+          try {
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            console.log('🚛 TRANSYT SW registered:', registration.scope);
+            
+            // Manejar actualizaciones
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('🆕 Nueva versión disponible');
+                  // Auto-actualizar para conductores
+                  window.location.reload();
+                }
               });
-            })
-            .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
             });
+            
+          } catch (error) {
+            console.log('❌ SW registration failed:', error);
+          }
         });
       }
     </script>

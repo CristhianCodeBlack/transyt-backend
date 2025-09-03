@@ -11,11 +11,14 @@ export const certificadoService = {
       responseType: 'blob'
     });
     
+    // Sanitizar código de verificación para evitar XSS
+    const safeCodigo = encodeURIComponent(codigoVerificacion || 'certificado');
+    
     // Crear URL para descarga
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `certificado_${codigoVerificacion}.pdf`);
+    link.setAttribute('download', `certificado_${safeCodigo}.pdf`);
     document.body.appendChild(link);
     link.click();
     link.remove();

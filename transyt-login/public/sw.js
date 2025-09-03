@@ -1,89 +1,149 @@
-const CACHE_NAME = 'transyt-v3-fixed';
-const STATIC_CACHE = 'transyt-static-v3';
+// TRANSYT Service Worker - Optimizado para conductores
+const VERSION = 'v4.0.0';
+const STATIC_CACHE = `transyt-static-${VERSION}`;
+const RUNTIME_CACHE = `transyt-runtime-${VERSION}`;
+const OFFLINE_CACHE = `transyt-offline-${VERSION}`;
 
-// Solo cachear recursos estáticos críticos
-const STATIC_ASSETS = [
+// Recursos críticos para funcionamiento offline
+const CRITICAL_ASSETS = [
   '/',
-  '/manifest.json'
+  '/manifest.json',
+  '/offline.html'
 ];
 
-// No cachear APIs para evitar datos obsoletos
-const NO_CACHE_URLS = [
+// APIs que NUNCA deben cachearse
+const API_PATTERNS = [
   '/api/',
-  'transyt-backend.onrender.com',
-  'localhost:8080',
+  'transyt-backend.onrender.com/api',
   '/auth/',
-  '/login',
-  '/admin',
-  '/empleado',
-  '/instructor'
+  '/login'
 ];
 
+// Recursos que se pueden cachear para offline
+const CACHEABLE_EXTENSIONS = ['.js', '.css', '.png', '.jpg', '.svg', '.ico', '.woff2'];
+
+// === INSTALACIÓN ===
 self.addEventListener('install', (event) => {
-  console.log('SW: Installing');
-  self.skipWaiting(); // Activar inmediatamente
+  console.log(`🔧 TRANSYT SW ${VERSION} installing...`);
+  self.skipWaiting();
+  
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log('SW: Cache opened');
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .catch((error) => {
-        console.log('SW: Cache failed', error);
-      })
+      .then(cache => cache.addAll(CRITICAL_ASSETS))
+      .then(() => console.log('✅ Critical assets cached'))
+      .catch(err => console.log('❌ Cache failed:', err))
   );
 });
 
-self.addEventListener('fetch', (event) => {
-  const url = event.request.url;
+// === ACTIVACIÓN ===
+self.addEventListener('activate', (event) => {
+  console.log(`🚀 TRANSYT SW ${VERSION} activating...`);
   
-    // No cachear APIs ni requests externos - pasar directamente
-  if (NO_CACHE_URLS.some(pattern => url.includes(pattern))) {
-    event.respondWith(fetch(event.request));
+  event.waitUntil(
+    Promise.all([
+      // Limpiar caches antiguos
+      caches.keys().then(cacheNames => 
+        Promise.all(
+          cacheNames
+            .filter(name => name.startsWith('transyt-') && !name.includes(VERSION))
+            .map(name => caches.delete(name))
+        )
+      ),
+      // Tomar control inmediatamente
+      self.clients.claim()
+    ]).then(() => console.log('✅ SW activated and controlling'))
+  );
+});
+
+// === INTERCEPTOR DE REQUESTS ===
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  // 🚫 NUNCA cachear APIs - pasar directo al servidor
+  if (API_PATTERNS.some(pattern => request.url.includes(pattern))) {
+    return; // Dejar que pase normalmente
+  }
+  
+  // 📱 Recursos estáticos - Cache First (para offline)
+  if (CACHEABLE_EXTENSIONS.some(ext => url.pathname.endsWith(ext))) {
+    event.respondWith(cacheFirst(request));
     return;
   }
   
-  // Solo cachear recursos estáticos (JS, CSS, imágenes)
-  if (url.includes('.js') || url.includes('.css') || url.includes('.png') || 
-      url.includes('.jpg') || url.includes('.svg') || url.includes('.ico')) {
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => {
-          if (response) {
-            return response;
-          }
-          return fetch(event.request)
-            .then((fetchResponse) => {
-              if (fetchResponse.status === 200) {
-                const responseClone = fetchResponse.clone();
-                caches.open(STATIC_CACHE)
-                  .then((cache) => cache.put(event.request, responseClone))
-                  .catch(() => {});
-              }
-              return fetchResponse;
-            })
-            .catch(() => caches.match('/'));
-        })
-    );
-  } else {
-    // Para todo lo demás (HTML, rutas), usar network-first
-    event.respondWith(
-      fetch(event.request)
-        .catch(() => caches.match('/') || caches.match('/index.html'))
+  // 🌐 Navegación (HTML) - Network First con fallback
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirstWithFallback(request));
+    return;
+  }
+});
+
+// === ESTRATEGIAS DE CACHE ===
+
+// Cache First - Para recursos estáticos
+async function cacheFirst(request) {
+  try {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    
+    const response = await fetch(request);
+    if (response.status === 200) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    console.log('Cache first failed:', error);
+    return new Response('Offline', { status: 503 });
+  }
+}
+
+// Network First - Para navegación
+async function networkFirstWithFallback(request) {
+  try {
+    const response = await fetch(request);
+    return response;
+  } catch (error) {
+    // Fallback para SPA routing
+    const cached = await caches.match('/') || await caches.match('/index.html');
+    return cached || new Response('App offline', { 
+      status: 503,
+      headers: { 'Content-Type': 'text/html' }
+    });
+  }
+}
+
+// === NOTIFICACIONES PUSH (para conductores) ===
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  
+  const data = event.data.json();
+  const options = {
+    body: data.body || 'Nueva notificación de TRANSYT',
+    icon: '/icon-192.png',
+    badge: '/badge-72.png',
+    tag: 'transyt-notification',
+    requireInteraction: true,
+    actions: [
+      { action: 'open', title: 'Abrir App' },
+      { action: 'dismiss', title: 'Cerrar' }
+    ]
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'TRANSYT', options)
+  );
+});
+
+// Manejar clicks en notificaciones
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  if (event.action === 'open' || !event.action) {
+    event.waitUntil(
+      clients.openWindow('/')
     );
   }
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-});
+console.log(`🚛 TRANSYT Service Worker ${VERSION} loaded successfully!`);

@@ -36,7 +36,7 @@ const CursoViewer = ({ cursoId, onBack }) => {
   const loadProgresoCurso = async () => {
     try {
       console.log('=== CARGANDO PROGRESO CURSO ===');
-      console.log('CursoId:', cursoId);
+      console.log('Cargando curso ID:', encodeURIComponent(cursoId || ''));
       console.log('Navigator online:', navigator.onLine);
       
       let data;
@@ -58,12 +58,12 @@ const CursoViewer = ({ cursoId, onBack }) => {
         const response = await api.get(`/modulo-progreso/curso/${cursoId}`);
         data = response.data;
         
-        console.log('Datos del progreso cargados desde servidor:', data);
+        console.log('Datos del progreso cargados desde servidor');
         console.log('Número de módulos:', data.modulos?.length);
         console.log('Progreso general:', data.progresoGeneral + '%');
       }
       
-      console.log('Estableciendo progreso del curso:', data);
+      console.log('Estableciendo progreso del curso');
       setProgresoCurso(data);
         
         // Seleccionar primer módulo no completado o el primero
@@ -235,7 +235,7 @@ const CursoViewer = ({ cursoId, onBack }) => {
         console.log('=== DEBUG MÓDULO BACKEND ===');
         try {
           const debugResponse = await api.get(`/modulo-progreso/debug/modulo/${moduloActivo?.id}`);
-          console.log('Datos del módulo en backend:', debugResponse.data);
+          console.log('Datos del módulo obtenidos del backend');
         } catch (error) {
           console.error('Error en debug:', error);
         }
