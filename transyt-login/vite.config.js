@@ -8,6 +8,8 @@ export default defineConfig({
     outDir: 'build'
   },
   server: {
+    // Configuración para SPA routing
+    historyApiFallback: true,
     // Proxy solo para desarrollo local
     ...(process.env.NODE_ENV !== 'production' && {
       proxy: {

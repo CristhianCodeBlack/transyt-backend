@@ -166,16 +166,43 @@ const Navbar = () => {
                 );
               })}
               
-              {/* Menú hamburguesa para más opciones */}
-              {navItems.length > 4 && (
-                <button
-                  onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-blue-100 hover:text-white hover:bg-white/10"
-                >
-                  <Menu className="h-4 w-4" />
-                  Más
-                </button>
-              )}
+              {/* Mostrar más opciones en desktop si hay más de 4 */}
+              {navItems.slice(4).map((item) => {
+                const Icon = item.icon;
+                return item.tab ? (
+                  <button
+                    key={item.tab}
+                    onClick={() => {
+                      if (window.setAdminTab) {
+                        window.setAdminTab(item.tab);
+                      }
+                      if (window.setInstructorTab) {
+                        window.setInstructorTab(item.tab);
+                      }
+                      if (window.setEmpleadoTab) {
+                        window.setEmpleadoTab(item.tab);
+                      }
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-blue-100 hover:text-white hover:bg-white/10"
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </button>
+                ) : (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      isActive(item.path)
+                        ? "bg-white/20 text-white shadow-lg"
+                        : "text-blue-100 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
@@ -223,16 +250,17 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - Mejorado para conductores */}
         {showMobileMenu && (
           <div className="lg:hidden border-t border-blue-700 dark:border-dark-600 py-4 bg-gradient-to-r from-blue-900 to-indigo-900 dark:from-dark-800 dark:to-dark-800">
-            <div className="space-y-2">
+            <div className="space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return item.tab ? (
                   <button
                     key={item.tab}
                     onClick={() => {
+                      console.log('Navegando a:', item.tab);
                       if (window.setAdminTab) {
                         window.setAdminTab(item.tab);
                       }
@@ -244,124 +272,59 @@ const Navbar = () => {
                       }
                       setShowMobileMenu(false);
                     }}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-blue-100 hover:text-white hover:bg-white/10`}
+                    className="w-full flex items-center gap-3 px-4 py-4 text-left text-blue-100 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 touch-manipulation"
                   >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="text-base font-medium">{item.label}</span>
                   </button>
                 ) : (
                   <Link
                     key={item.path}
                     to={item.path}
                     onClick={() => setShowMobileMenu(false)}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`w-full flex items-center gap-3 px-4 py-4 text-left rounded-lg transition-all duration-200 touch-manipulation ${
                       isActive(item.path)
                         ? "bg-white/20 text-white"
                         : "text-blue-100 hover:text-white hover:bg-white/10"
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="text-base font-medium">{item.label}</span>
                   </Link>
                 );
               })}
             </div>
             
-            {/* Opciones adicionales en móvil */}
-            <div className="border-t border-blue-700 mt-4 pt-4 space-y-2">
-              <div className="flex items-center justify-between px-3 py-2">
-                <span className="text-sm text-blue-100">Modo Oscuro</span>
-                <ThemeToggle />
-              </div>
-              
-              <div className="px-3 py-2">
-                <div className="text-sm text-blue-100 mb-2">Descargas Offline</div>
-                <OfflineManager cursos={cursos} />
-              </div>
-              
-              <div className="px-3 py-2">
-                <div className="text-sm text-blue-100 mb-2">Notificaciones</div>
-                <NotificationCenter />
-              </div>
-            </div>
-            
+            {/* Usuario y logout en móvil */}
             <div className="border-t border-blue-700 mt-4 pt-4">
-              <div className="flex items-center gap-3 px-3 py-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
+              <div className="flex items-center gap-3 px-4 py-3 text-blue-100">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center">
+                  <User className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">{nombre}</p>
-                  <p className="text-xs text-blue-200 capitalize">{rol?.toLowerCase()}</p>
+                  <p className="text-base font-medium text-white">{nombre}</p>
+                  <p className="text-sm text-blue-200 capitalize">{rol?.toLowerCase()}</p>
                 </div>
               </div>
+              
               <button
-                onClick={handleLogout}
-                className="w-full text-left px-3 py-2 text-sm text-red-300 hover:text-red-200 hover:bg-red-500/20 flex items-center gap-3 mt-2 rounded-lg transition-all duration-200"
+                onClick={() => {
+                  handleLogout();
+                  setShowMobileMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-4 text-left text-red-300 hover:text-red-200 hover:bg-red-500/20 rounded-lg transition-all duration-200 touch-manipulation"
               >
-                <LogOut className="h-4 w-4" />
-                Cerrar Sesión
+                <LogOut className="h-5 w-5" />
+                <span className="text-base font-medium">Cerrar Sesión</span>
               </button>
             </div>
+            
+
           </div>
         )}
       </div>
 
-      {/* Modal de opciones adicionales */}
-      {showMobileMenu && navItems.length > 4 && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dark-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Más Opciones</h3>
-                <button
-                  onClick={() => setShowMobileMenu(false)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-dark-700 rounded-lg transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              
-              <div className="space-y-2">
-                {navItems.slice(4).map((item) => {
-                  const Icon = item.icon;
-                  return item.tab ? (
-                    <button
-                      key={item.tab}
-                      onClick={() => {
-                        if (window.setAdminTab) {
-                          window.setAdminTab(item.tab);
-                        }
-                        if (window.setInstructorTab) {
-                          window.setInstructorTab(item.tab);
-                        }
-                        if (window.setEmpleadoTab) {
-                          window.setEmpleadoTab(item.tab);
-                        }
-                        setShowMobileMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 rounded-lg flex items-center gap-3 transition-colors"
-                    >
-                      <Icon className="h-5 w-5" />
-                      {item.label}
-                    </button>
-                  ) : (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setShowMobileMenu(false)}
-                      className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 rounded-lg flex items-center gap-3 transition-colors"
-                    >
-                      <Icon className="h-5 w-5" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
       
       {/* Modal de usuario */}
       {showUserMenu && (
