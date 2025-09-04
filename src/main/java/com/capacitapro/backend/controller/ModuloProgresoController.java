@@ -706,6 +706,27 @@ public class ModuloProgresoController {
         }
     }
     
+    @PostMapping("/forzar-actualizacion/{cursoId}")
+    public ResponseEntity<String> forzarActualizacionProgreso(
+            @PathVariable Long cursoId,
+            Authentication authentication) {
+        try {
+            Usuario usuario = getUsuarioAutenticado(authentication);
+            System.out.println("=== FORZANDO ACTUALIZACIÓN DE PROGRESO ===");
+            System.out.println("Usuario: " + usuario.getNombre());
+            System.out.println("Curso ID: " + cursoId);
+            
+            // Forzar actualización del progreso
+            progresoService.actualizarProgresoCurso(cursoId, usuario);
+            
+            return ResponseEntity.ok("Progreso actualizado correctamente");
+        } catch (Exception e) {
+            System.err.println("Error forzando actualización: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.ok("Error: " + e.getMessage());
+        }
+    }
+    
     @GetMapping("/debug/evaluaciones/{cursoId}")
     public ResponseEntity<Map<String, Object>> debugEvaluaciones(@PathVariable Long cursoId) {
         try {
