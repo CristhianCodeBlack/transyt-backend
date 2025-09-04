@@ -32,6 +32,8 @@ public class ProgresoServiceImpl implements ProgresoService {
     private final EvaluacionRepository evaluacionRepository;
     private final EvaluacionUsuarioRepository evaluacionUsuarioRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.capacitapro.backend.repository.SubmoduloRepository submoduloRepository;
+    private final com.capacitapro.backend.repository.SubmoduloProgresoRepository submoduloProgresoRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -212,14 +214,21 @@ public class ProgresoServiceImpl implements ProgresoService {
             cursoUsuario.iniciarCurso();
         }
         
-        Long totalModulos = moduloRepository.countActivosByCursoId(cursoId);
-        Long modulosCompletados = moduloProgresoRepository.countCompletadosByUsuarioAndCurso(usuario.getId(), cursoId);
+        // USAR LA MISMA LÓGICA QUE EL PROGRESO GENERAL
+        // Contar submódulos y evaluaciones igual que ModuloProgresoController
+        ConteoProgreso conteo = contarElementosComoProgresoGeneral(cursoId, usuario);
         
-        Long totalEvaluaciones = evaluacionRepository.countActivasByCursoId(cursoId);
-        Long evaluacionesAprobadas = evaluacionUsuarioRepository.countAprobadasByUsuarioAndCurso(usuario.getId(), cursoId);
+        Integer porcentajeProgreso = conteo.totalElementos > 0 ? 
+            (int) ((conteo.elementosCompletados * 100) / conteo.totalElementos) : 0;
+        porcentajeProgreso = Math.min(porcentajeProgreso, 100);
         
-        Integer porcentajeProgreso = calcularPorcentajeProgreso(modulosCompletados, totalModulos, evaluacionesAprobadas, totalEvaluaciones);
         cursoUsuario.setPorcentajeProgreso(porcentajeProgreso);
+        
+        System.out.println("=== ACTUALIZANDO PROGRESO CURSO (ProgresoService) ===");
+        System.out.println("Usuario: " + usuario.getNombre());
+        System.out.println("Total elementos: " + conteo.totalElementos);
+        System.out.println("Elementos completados: " + conteo.elementosCompletados);
+        System.out.println("Progreso calculado: " + porcentajeProgreso + "%");
         
         // Marcar como completado si terminó todo
         if (porcentajeProgreso >= 100 && !cursoUsuario.getCompletado()) {
@@ -274,13 +283,87 @@ public class ProgresoServiceImpl implements ProgresoService {
         }
     }
 
+    // Clase interna para el conteo de progreso
+    private static class ConteoProgreso {
+        long totalElementos;
+        long elementosCompletados;
+        
+        ConteoProgreso(long totalElementos, long elementosCompletados) {
+            this.totalElementos = totalElementos;
+            this.elementosCompletados = elementosCompletados;
+        }
+    }
+    
+    // Método que replica EXACTAMENTE la lógica del Progreso General
+    private ConteoProgreso contarElementosComoProgresoGeneral(Long cursoId, Usuario usuario) {
+        try {
+            List<Modulo> modulos = moduloRepository.findActivosByCursoIdOrderByOrden(cursoId);
+            
+            long totalElementosCurso = 0;
+            long elementosCompletadosCurso = 0;
+            
+            for (Modulo modulo : modulos) {
+                // Contar submódulos del módulo
+                List<com.capacitapro.backend.entity.Submodulo> submodulos = 
+                    submoduloRepository.findByModuloIdOrderByOrdenAsc(modulo.getId());
+                
+                // Contar evaluaciones del módulo
+                List<Evaluacion> evalsModulo = evaluacionRepository.findByModuloIdAndActivoTrue(modulo.getId());
+                
+                // Contar evaluaciones del curso
+                List<Evaluacion> evalsCurso = evaluacionRepository.findActivasByCursoId(cursoId);
+                
+                // Combinar evaluaciones evitando duplicados (IGUAL QUE PROGRESO GENERAL)
+                List<Evaluacion> todasEvals = new java.util.ArrayList<>(evalsModulo);
+                for (Evaluacion evalCurso : evalsCurso) {
+                    if (!todasEvals.stream().anyMatch(e -> e.getId().equals(evalCurso.getId()))) {
+                        todasEvals.add(evalCurso);
+                    }
+                }
+                
+                int elementosModulo = submodulos.size() + todasEvals.size();
+                totalElementosCurso += elementosModulo;
+                
+                System.out.println("DEBUG ProgresoService - Módulo " + modulo.getId() + ": " + 
+                    submodulos.size() + " submódulos + " + todasEvals.size() + " evaluaciones = " + elementosModulo);
+                
+                // Contar elementos completados
+                Long subsCompletados = submoduloProgresoRepository.countCompletadosByUsuarioAndModulo(usuario, modulo);
+                
+                long evalsAprobadas = todasEvals.stream()
+                        .filter(e -> evaluacionUsuarioRepository.findByUsuarioAndEvaluacion(usuario, e)
+                                .map(eu -> Boolean.TRUE.equals(eu.getAprobado()))
+                                .orElse(false))
+                        .count();
+                
+                int elementosCompletadosModulo = Math.min(
+                    subsCompletados.intValue() + (int) evalsAprobadas, 
+                    elementosModulo
+                );
+                elementosCompletadosCurso += elementosCompletadosModulo;
+                
+                System.out.println("  - Submódulos completados: " + subsCompletados);
+                System.out.println("  - Evaluaciones aprobadas: " + evalsAprobadas);
+                System.out.println("  - Total completados: " + elementosCompletadosModulo);
+            }
+            
+            System.out.println("TOTAL CURSO: " + elementosCompletadosCurso + "/" + totalElementosCurso);
+            return new ConteoProgreso(totalElementosCurso, elementosCompletadosCurso);
+            
+        } catch (Exception e) {
+            System.err.println("Error contando elementos: " + e.getMessage());
+            e.printStackTrace();
+            return new ConteoProgreso(0, 0);
+        }
+    }
+    
     private Integer calcularPorcentajeProgreso(Long modulosCompletados, Long totalModulos, Long evaluacionesAprobadas, Long totalEvaluaciones) {
+        // USAR EL NUEVO MÉTODO QUE REPLICA EL PROGRESO GENERAL
+        // Este método se mantiene para compatibilidad pero ya no se usa en actualizarProgresoCurso
         if (totalModulos == 0 && totalEvaluaciones == 0) {
             return 0;
         }
         
-        // USAR LA MISMA LÓGICA QUE EL PROGRESO GENERAL QUE FUNCIONA BIEN
-        // Contar elementos totales y completados (igual que ModuloProgresoController líneas 175-200)
         long totalElementos = totalModulos + totalEvaluaciones;
         long elementosCompletados = modulosCompletados + evaluacionesAprobadas;
         
@@ -288,13 +371,8 @@ public class ProgresoServiceImpl implements ProgresoService {
             return 0;
         }
         
-        // Limitar elementos completados al máximo posible para evitar > 100%
         elementosCompletados = Math.min(elementosCompletados, totalElementos);
-        
-        // Cálculo exacto del Progreso General que funciona
         int progreso = totalElementos > 0 ? (int) ((elementosCompletados * 100) / totalElementos) : 0;
-        
-        // Limitar progreso máximo a 100%
         progreso = Math.min(progreso, 100);
         
         return progreso;
