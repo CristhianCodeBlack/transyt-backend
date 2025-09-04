@@ -24,7 +24,7 @@ public interface EvaluacionUsuarioRepository extends JpaRepository<EvaluacionUsu
     @Query("SELECT COUNT(eu) FROM EvaluacionUsuario eu WHERE eu.usuario.id = :usuarioId AND eu.aprobado = true")
     Long countAprobadasByUsuarioId(@Param("usuarioId") Long usuarioId);
     
-    @Query("SELECT COUNT(DISTINCT eu.evaluacion.id) FROM EvaluacionUsuario eu WHERE eu.usuario.id = :usuarioId AND eu.evaluacion.curso.id = :cursoId AND eu.aprobado = true")
+    @Query("SELECT COUNT(eu) FROM EvaluacionUsuario eu WHERE eu.usuario.id = :usuarioId AND eu.evaluacion.curso.id = :cursoId AND eu.aprobado = true")
     Long countAprobadasByUsuarioAndCurso(@Param("usuarioId") Long usuarioId, @Param("cursoId") Long cursoId);
     
     @Query("SELECT eu FROM EvaluacionUsuario eu WHERE eu.usuario.id = :usuarioId AND eu.evaluacion.curso.id = :cursoId AND eu.aprobado = true")

@@ -19,7 +19,7 @@ public interface EvaluacionRepository extends JpaRepository<Evaluacion, Long> {
     @Query("SELECT e FROM Evaluacion e WHERE e.curso.id = :cursoId AND e.activo = true")
     List<Evaluacion> findActivasByCursoId(@Param("cursoId") Long cursoId);
     
-    @Query("SELECT COUNT(DISTINCT e.id) FROM Evaluacion e WHERE e.curso.id = :cursoId AND e.activo = true")
+    @Query("SELECT COUNT(e) FROM Evaluacion e WHERE e.curso.id = :cursoId AND e.activo = true")
     Long countActivasByCursoId(@Param("cursoId") Long cursoId);
     
     @Query("SELECT e FROM Evaluacion e WHERE e.curso.id = :cursoId AND e.activo = true ORDER BY e.id")

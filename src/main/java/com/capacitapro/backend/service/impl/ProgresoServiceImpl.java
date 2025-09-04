@@ -221,27 +221,18 @@ public class ProgresoServiceImpl implements ProgresoService {
         Integer porcentajeProgreso = calcularPorcentajeProgreso(modulosCompletados, totalModulos, evaluacionesAprobadas, totalEvaluaciones);
         cursoUsuario.setPorcentajeProgreso(porcentajeProgreso);
         
-        // CAMBIO CRÍTICO: Marcar como completado solo si REALMENTE está al 100%
-        // Y verificar que puede generar certificado
-        boolean puedeCompletar = porcentajeProgreso >= 100 && puedeGenerarCertificado(cursoId, usuario);
-        
-        if (puedeCompletar && !cursoUsuario.getCompletado()) {
+        // Marcar como completado si terminó todo
+        if (porcentajeProgreso >= 100 && !cursoUsuario.getCompletado()) {
             cursoUsuario.completarCurso();
             
-            // Publicar evento para generar certificado
-            eventPublisher.publishEvent(new CursoCompletadoEvent(cursoId, usuario.getId()));
-            System.out.println("✅ Curso completado y certificado generado para " + usuario.getNombre());
-        } else if (!puedeCompletar && cursoUsuario.getCompletado()) {
-            // Si ya no puede generar certificado, desmarcar como completado
-            cursoUsuario.setCompletado(false);
-            cursoUsuario.setFechaCompletado(null);
-            System.out.println("⚠️ Curso desmarcado como completado para " + usuario.getNombre() + " - no cumple requisitos");
+            // Publicar evento para generar certificado (evita dependencia circular)
+            if (puedeGenerarCertificado(cursoId, usuario)) {
+                eventPublisher.publishEvent(new CursoCompletadoEvent(cursoId, usuario.getId()));
+                System.out.println("✅ Evento de curso completado publicado para " + usuario.getNombre());
+            }
         }
         
         cursoUsuarioRepository.save(cursoUsuario);
-        
-        // Debug automático después de actualizar
-        debugProgresoCurso(cursoId, usuario);
     }
 
     @Override
@@ -288,21 +279,13 @@ public class ProgresoServiceImpl implements ProgresoService {
             return 0;
         }
         
-        // CAMBIO CRÍTICO: Usar el mismo cálculo que ModuloProgresoController
-        // Contar elementos totales y completados de forma unificada
-        long totalElementos = totalModulos + totalEvaluaciones;
-        long elementosCompletados = modulosCompletados + evaluacionesAprobadas;
+        // REVERTIR: Usar el sistema de pesos original que funcionaba
+        double pesoModulos = 0.7; // 70% del progreso
+        double pesoEvaluaciones = 0.3; // 30% del progreso
         
-        if (totalElementos == 0) {
-            return 0;
-        }
+        double progresoModulos = totalModulos > 0 ? (modulosCompletados.doubleValue() / totalModulos.doubleValue()) * pesoModulos : 0;
+        double progresoEvaluaciones = totalEvaluaciones > 0 ? (evaluacionesAprobadas.doubleValue() / totalEvaluaciones.doubleValue()) * pesoEvaluaciones : 0;
         
-        // Limitar elementos completados al máximo posible para evitar > 100%
-        elementosCompletados = Math.min(elementosCompletados, totalElementos);
-        
-        int progreso = (int) Math.round((elementosCompletados * 100.0) / totalElementos);
-        
-        // Asegurar que esté en rango válido
-        return Math.max(0, Math.min(100, progreso));
+        return (int) Math.round((progresoModulos + progresoEvaluaciones) * 100);
     }
 }
