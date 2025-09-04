@@ -279,13 +279,24 @@ public class ProgresoServiceImpl implements ProgresoService {
             return 0;
         }
         
-        // REVERTIR: Usar el sistema de pesos original que funcionaba
-        double pesoModulos = 0.7; // 70% del progreso
-        double pesoEvaluaciones = 0.3; // 30% del progreso
+        // USAR LA MISMA LÓGICA QUE EL PROGRESO GENERAL QUE FUNCIONA BIEN
+        // Contar elementos totales y completados (igual que ModuloProgresoController líneas 175-200)
+        long totalElementos = totalModulos + totalEvaluaciones;
+        long elementosCompletados = modulosCompletados + evaluacionesAprobadas;
         
-        double progresoModulos = totalModulos > 0 ? (modulosCompletados.doubleValue() / totalModulos.doubleValue()) * pesoModulos : 0;
-        double progresoEvaluaciones = totalEvaluaciones > 0 ? (evaluacionesAprobadas.doubleValue() / totalEvaluaciones.doubleValue()) * pesoEvaluaciones : 0;
+        if (totalElementos == 0) {
+            return 0;
+        }
         
-        return (int) Math.round((progresoModulos + progresoEvaluaciones) * 100);
+        // Limitar elementos completados al máximo posible para evitar > 100%
+        elementosCompletados = Math.min(elementosCompletados, totalElementos);
+        
+        // Cálculo exacto del Progreso General que funciona
+        int progreso = totalElementos > 0 ? (int) ((elementosCompletados * 100) / totalElementos) : 0;
+        
+        // Limitar progreso máximo a 100%
+        progreso = Math.min(progreso, 100);
+        
+        return progreso;
     }
 }
