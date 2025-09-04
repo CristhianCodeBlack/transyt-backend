@@ -411,6 +411,7 @@ public class ModuloProgresoController {
         try {
             System.out.println("=== MARCANDO SUBMÓDULO COMO VISTO (BACKEND) ===");
             System.out.println("SubmoduloId: " + submoduloId);
+            System.out.println("Timestamp: " + LocalDateTime.now());
             
             Usuario usuario = getUsuarioAutenticado(authentication);
             System.out.println("Usuario: " + usuario.getNombre());
@@ -486,7 +487,16 @@ public class ModuloProgresoController {
             submoduloProgreso.setCompletado(true);
             submoduloProgreso.setPorcentajeProgreso(100);
             submoduloProgreso.setFechaCompletado(LocalDateTime.now());
-            submoduloProgresoRepo.save(submoduloProgreso);
+            
+            System.out.println("GUARDANDO PROGRESO SUBMÓDULO:");
+            System.out.println("  - ID: " + submoduloProgreso.getId());
+            System.out.println("  - Usuario: " + submoduloProgreso.getUsuario().getNombre());
+            System.out.println("  - Submódulo: " + submoduloProgreso.getSubmodulo().getTitulo());
+            System.out.println("  - Completado: " + submoduloProgreso.getCompletado());
+            System.out.println("  - Porcentaje: " + submoduloProgreso.getPorcentajeProgreso());
+            
+            SubmoduloProgreso saved = submoduloProgresoRepo.save(submoduloProgreso);
+            System.out.println("PROGRESO GUARDADO CON ID: " + saved.getId());
             
             // Obtener o crear progreso del módulo
             ModuloProgreso progreso = moduloProgresoRepo
@@ -617,6 +627,56 @@ public class ModuloProgresoController {
             // Evaluaciones
             List<Evaluacion> evaluaciones = evaluacionRepo.findByModuloIdAndActivoTrue(moduloId);
             debug.put("totalEvaluaciones", evaluaciones.size());
+            
+            return ResponseEntity.ok(debug);
+            
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.ok(error);
+        }
+    }
+    
+    @GetMapping("/debug/submodulo/{submoduloId}/estado")
+    public ResponseEntity<Map<String, Object>> debugEstadoSubmodulo(
+            @PathVariable Long submoduloId,
+            Authentication authentication) {
+        try {
+            Usuario usuario = getUsuarioAutenticado(authentication);
+            Submodulo submodulo = submoduloRepo.findById(submoduloId).orElse(null);
+            
+            Map<String, Object> debug = new HashMap<>();
+            debug.put("submoduloId", submoduloId);
+            debug.put("usuarioId", usuario.getId());
+            debug.put("usuarioNombre", usuario.getNombre());
+            
+            if (submodulo == null) {
+                debug.put("error", "Submódulo no encontrado");
+                return ResponseEntity.ok(debug);
+            }
+            
+            debug.put("submoduloTitulo", submodulo.getTitulo());
+            debug.put("submoduloTipo", submodulo.getTipo());
+            debug.put("moduloId", submodulo.getModulo().getId());
+            
+            // Buscar progreso
+            try {
+                Optional<SubmoduloProgreso> progreso = submoduloProgresoRepo.findByUsuarioAndSubmodulo(usuario, submodulo);
+                if (progreso.isPresent()) {
+                    debug.put("progresoEncontrado", true);
+                    debug.put("completado", progreso.get().getCompletado());
+                    debug.put("porcentaje", progreso.get().getPorcentajeProgreso());
+                    debug.put("fechaCompletado", progreso.get().getFechaCompletado());
+                } else {
+                    debug.put("progresoEncontrado", false);
+                }
+            } catch (Exception e) {
+                debug.put("errorProgreso", e.getMessage());
+                // Buscar duplicados
+                List<SubmoduloProgreso> duplicados = submoduloProgresoRepo.findAllByUsuarioAndSubmodulo(usuario, submodulo);
+                debug.put("duplicados", duplicados.size());
+                debug.put("algunoCompletado", duplicados.stream().anyMatch(sp -> Boolean.TRUE.equals(sp.getCompletado())));
+            }
             
             return ResponseEntity.ok(debug);
             
