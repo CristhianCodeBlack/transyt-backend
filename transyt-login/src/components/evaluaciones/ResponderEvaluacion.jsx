@@ -45,8 +45,15 @@ const ResponderEvaluacion = ({ evaluacion, onClose }) => {
   const handleSubmit = async () => {
     // Validar que todas las preguntas estén respondidas
     const preguntasRespondidas = Object.keys(respuestas).length;
-    if (preguntasRespondidas < evaluacion.preguntas.length) {
-      if (!window.confirm(`Solo has respondido ${preguntasRespondidas} de ${evaluacion.preguntas.length} preguntas. ¿Deseas enviar la evaluación?`)) {
+    const totalPreguntas = evaluacion.preguntas?.length || 0;
+    
+    if (preguntasRespondidas < totalPreguntas) {
+      // Sanitizar valores para evitar inyección de código
+      const preguntasNum = Math.max(0, Math.min(999, parseInt(preguntasRespondidas) || 0));
+      const totalNum = Math.max(0, Math.min(999, parseInt(totalPreguntas) || 0));
+      
+      const mensaje = `Solo has respondido ${preguntasNum} de ${totalNum} preguntas. ¿Deseas enviar la evaluación?`;
+      if (!window.confirm(mensaje)) {
         return;
       }
     }

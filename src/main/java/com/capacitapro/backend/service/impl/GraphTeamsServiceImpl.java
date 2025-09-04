@@ -85,27 +85,48 @@ public class GraphTeamsServiceImpl implements GraphTeamsService {
 
         // Usar el correo real del usuario con licencia de Teams
         String teamsUserEmail = "transytti@transytlogistics.com";
-        String url = graphBaseUrl + "/users/" + teamsUserEmail + "/calendar/events";
+        String url = graphBaseUrl + "/users/" + teamsUserEmail + "/events";
 
-        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, request, Map.class);
+        try {
+            System.out.println("=== CREANDO REUNIÓN EN TEAMS ===");
+            System.out.println("URL: " + url);
+            System.out.println("Body: " + body);
+            
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, request, Map.class);
+            
+            System.out.println("Respuesta Teams: " + response.getStatusCode());
+            System.out.println("Body respuesta: " + response.getBody());
 
-        if (response.getStatusCode() == HttpStatus.CREATED || response.getStatusCode() == HttpStatus.OK) {
-            Map<String, Object> responseBody = response.getBody();
+            if (response.getStatusCode() == HttpStatus.CREATED || response.getStatusCode() == HttpStatus.OK) {
+                Map<String, Object> responseBody = response.getBody();
 
-            evento.setMeetingId((String) responseBody.get("id"));
+                evento.setMeetingId((String) responseBody.get("id"));
 
-            Map<String, Object> onlineMeetingResp = (Map<String, Object>) responseBody.get("onlineMeeting");
-            if (onlineMeetingResp != null) {
-                evento.setMeetingLink((String) onlineMeetingResp.get("joinUrl"));
+                Map<String, Object> onlineMeetingResp = (Map<String, Object>) responseBody.get("onlineMeeting");
+                if (onlineMeetingResp != null) {
+                    evento.setMeetingLink((String) onlineMeetingResp.get("joinUrl"));
+                    System.out.println("✅ Reunión creada exitosamente: " + evento.getMeetingLink());
+                } else {
+                    System.out.println("⚠️ No se generó enlace de Teams en la respuesta");
+                }
+
+                return evento;
+            } else {
+                throw new RuntimeException("Error al crear reunión en Microsoft Teams: " + response.getBody());
             }
-
-            return evento;
-        } else {
-            throw new RuntimeException("Error al crear reunión en Microsoft Teams: " + response.getBody());
+        } catch (Exception e) {
+            System.err.println("Error en GraphTeamsService: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 
     private String obtenerToken() {
+        System.out.println("=== OBTENIENDO TOKEN DE MICROSOFT GRAPH ===");
+        System.out.println("Tenant ID: " + tenantId);
+        System.out.println("Client ID: " + clientId);
+        System.out.println("Token URI: " + tokenUri);
+        
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
@@ -122,12 +143,23 @@ public class GraphTeamsServiceImpl implements GraphTeamsService {
         }
 
         HttpEntity<String> request = new HttpEntity<>(body.toString(), headers);
-        ResponseEntity<Map> response = restTemplate.exchange(tokenUri, HttpMethod.POST, request, Map.class);
-
-        if (response.getStatusCode().is2xxSuccessful()) {
-            return (String) response.getBody().get("access_token");
-        } else {
-            throw new RuntimeException("Error al obtener token: " + response.getBody());
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(tokenUri, HttpMethod.POST, request, Map.class);
+            
+            System.out.println("Respuesta token: " + response.getStatusCode());
+            
+            if (response.getStatusCode().is2xxSuccessful()) {
+                String token = (String) response.getBody().get("access_token");
+                System.out.println("✅ Token obtenido exitosamente");
+                return token;
+            } else {
+                System.err.println("Error obteniendo token: " + response.getBody());
+                throw new RuntimeException("Error al obtener token: " + response.getBody());
+            }
+        } catch (Exception e) {
+            System.err.println("Excepción obteniendo token: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 }

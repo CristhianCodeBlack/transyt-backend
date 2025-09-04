@@ -8,6 +8,7 @@ import com.capacitapro.backend.service.CertificadoService;
 import com.capacitapro.backend.service.ProgresoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,7 +23,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/evaluaciones")
 @RequiredArgsConstructor
-
+@Slf4j
 public class EvaluacionController {
 
     private final EvaluacionService evaluacionService;
@@ -58,11 +59,11 @@ public class EvaluacionController {
     @GetMapping("/modulo/{moduloId}")
     public ResponseEntity<List<EvaluacionDTO>> listarPorModulo(@PathVariable Long moduloId) {
         try {
-            System.out.println("=== BUSCANDO EVALUACIONES PARA MÓDULO " + moduloId + " ===");
+            log.info("Buscando evaluaciones para módulo: {}", moduloId);
             
             // Buscar evaluaciones del módulo
             List<Evaluacion> evaluacionesModulo = evaluacionRepo.findByModuloIdAndActivoTrue(moduloId);
-            System.out.println("Evaluaciones del módulo: " + evaluacionesModulo.size());
+            log.debug("Evaluaciones del módulo encontradas: {}", evaluacionesModulo.size());
             
             // Buscar evaluaciones del curso (ya que aparecen como submódulos)
             List<Evaluacion> evaluacionesCurso = new java.util.ArrayList<>();
@@ -72,10 +73,10 @@ public class EvaluacionController {
                 if (moduloOpt.isPresent()) {
                     Long cursoId = moduloOpt.get().getCurso().getId();
                     evaluacionesCurso = evaluacionRepo.findActivasByCursoId(cursoId);
-                    System.out.println("Evaluaciones del curso " + cursoId + ": " + evaluacionesCurso.size());
+                    log.debug("Evaluaciones del curso {}: {}", cursoId, evaluacionesCurso.size());
                 }
             } catch (Exception e) {
-                System.err.println("Error obteniendo evaluaciones del curso: " + e.getMessage());
+                log.error("Error obteniendo evaluaciones del curso", e);
             }
             
             // Combinar ambas listas evitando duplicados
@@ -86,12 +87,12 @@ public class EvaluacionController {
                 }
             }
             
-            System.out.println("Total evaluaciones encontradas: " + todasEvaluaciones.size());
+            log.debug("Total evaluaciones encontradas: {}", todasEvaluaciones.size());
             
             List<EvaluacionDTO> evaluacionesDTO = new java.util.ArrayList<>();
             
             for (Evaluacion eval : todasEvaluaciones) {
-                System.out.println("Procesando evaluación: " + eval.getId() + " - " + eval.getTitulo());
+                log.debug("Procesando evaluación ID: {} - Título: {}", eval.getId(), eval.getTitulo());
                 EvaluacionDTO dto = new EvaluacionDTO();
                 dto.setId(eval.getId());
                 dto.setTitulo(eval.getTitulo());
@@ -125,7 +126,7 @@ public class EvaluacionController {
             
             return ResponseEntity.ok(evaluacionesDTO);
         } catch (Exception e) {
-            System.err.println("Error obteniendo evaluaciones por módulo: " + e.getMessage());
+            log.error("Error obteniendo evaluaciones por módulo", e);
             return ResponseEntity.ok(java.util.Collections.emptyList());
         }
     }
@@ -137,7 +138,7 @@ public class EvaluacionController {
             EvaluacionDTO evaluacion = evaluacionService.obtenerPorId(id, usuario);
             return ResponseEntity.ok(evaluacion);
         } catch (Exception e) {
-            System.err.println("Error obteniendo evaluación: " + e.getMessage());
+            log.error("Error obteniendo evaluación", e);
             // Intentar obtener sin validación para empleados
             try {
                 EvaluacionDTO evaluacion = evaluacionService.obtenerPorIdSinValidacion(id);
@@ -158,8 +159,7 @@ public class EvaluacionController {
             EvaluacionDTO nuevaEvaluacion = evaluacionService.crearEvaluacion(evaluacionDTO, usuario);
             return ResponseEntity.status(HttpStatus.CREATED).body(nuevaEvaluacion);
         } catch (Exception e) {
-            System.err.println("Error al crear evaluación: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error al crear evaluación", e);
             throw e;
         }
     }
@@ -168,14 +168,14 @@ public class EvaluacionController {
     @Transactional
     public ResponseEntity<String> actualizarPreguntasTest(@RequestBody Map<String, Object> data) {
         try {
-            System.out.println("=== ACTUALIZANDO PREGUNTAS ===");
-            System.out.println("Data: " + data);
+            log.info("Actualizando preguntas para evaluación");
+            log.debug("Data recibida: {}", data);
             
             Long evaluacionId = ((Number) data.get("id")).longValue();
             Evaluacion evaluacion = evaluacionRepo.findById(evaluacionId)
                     .orElseThrow(() -> new RuntimeException("Evaluación no encontrada"));
             
-            System.out.println("Evaluación encontrada: " + evaluacion.getTitulo());
+            log.debug("Evaluación encontrada: {}", evaluacion.getTitulo());
             
             // Eliminar preguntas existentes
             List<Pregunta> preguntasExistentes = preguntaRepo.findByEvaluacion(evaluacion);
@@ -183,7 +183,7 @@ public class EvaluacionController {
                 respuestaRepo.deleteByPregunta(p);
                 preguntaRepo.delete(p);
             }
-            System.out.println("Preguntas existentes eliminadas: " + preguntasExistentes.size());
+            log.debug("Preguntas existentes eliminadas: {}", preguntasExistentes.size());
             
             // Agregar nuevas preguntas
             @SuppressWarnings("unchecked")
@@ -205,7 +205,7 @@ public class EvaluacionController {
                     pregunta.setEvaluacion(evaluacion);
                     
                     pregunta = preguntaRepo.save(pregunta);
-                    System.out.println("Nueva pregunta guardada: " + pregunta.getId());
+                    log.debug("Nueva pregunta guardada con ID: {}", pregunta.getId());
                     
                     // Guardar respuestas
                     @SuppressWarnings("unchecked")
@@ -238,13 +238,9 @@ public class EvaluacionController {
             @RequestBody Map<String, Object> data,
             Authentication authentication) {
         try {
-            System.out.println("=== CREANDO TEST SIMPLE ===");
-            System.out.println("Data completa recibida: " + data);
-            System.out.println("Titulo: " + data.get("titulo"));
-            System.out.println("Descripcion: " + data.get("descripcion"));
-            System.out.println("CursoId: " + data.get("cursoId"));
-            System.out.println("ModuloId: " + data.get("moduloId"));
-            System.out.println("NotaMinima: " + data.get("notaMinima"));
+            log.info("Creando test simple");
+            log.debug("Datos recibidos - Titulo: {}, CursoId: {}, NotaMinima: {}", 
+                     data.get("titulo"), data.get("cursoId"), data.get("notaMinima"));
             
             // Crear evaluación directamente
             Evaluacion evaluacion = new Evaluacion();
@@ -259,31 +255,26 @@ public class EvaluacionController {
             evaluacion.setCurso(curso);
             
             evaluacion = evaluacionRepo.save(evaluacion);
-            System.out.println("Evaluación guardada: " + evaluacion.getId());
+            log.debug("Evaluación guardada con ID: {}", evaluacion.getId());
             
             // Guardar preguntas
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> preguntas = (List<Map<String, Object>>) data.get("preguntas");
             
-            System.out.println("Preguntas recibidas: " + preguntas);
-            System.out.println("Número de preguntas: " + (preguntas != null ? preguntas.size() : 0));
+            log.debug("Número de preguntas recibidas: {}", (preguntas != null ? preguntas.size() : 0));
             
             if (preguntas != null) {
                 int preguntaIndex = 0;
                 for (Map<String, Object> p : preguntas) {
                     preguntaIndex++;
-                    System.out.println("=== PROCESANDO PREGUNTA " + preguntaIndex + " ===");
-                    System.out.println("Pregunta data: " + p);
+                    log.debug("Procesando pregunta {}", preguntaIndex);
                     
                     String enunciado = (String) p.get("enunciado");
-                    System.out.println("Enunciado: " + enunciado);
-                    System.out.println("Puntaje: " + p.get("puntaje"));
-                    System.out.println("Tipo: " + p.get("tipo"));
                     
                     // Saltar preguntas sin enunciado o muy cortas
                     if (enunciado == null || enunciado.trim().length() < 10) {
-                        System.out.println("SALTANDO pregunta con enunciado inválido: " + enunciado);
-                        System.out.println("Longitud del enunciado: " + (enunciado != null ? enunciado.trim().length() : 0));
+                        log.debug("Saltando pregunta con enunciado inválido, longitud: {}", 
+                                 (enunciado != null ? enunciado.trim().length() : 0));
                         continue;
                     }
                     
@@ -295,7 +286,7 @@ public class EvaluacionController {
                     pregunta.setEvaluacion(evaluacion);
                     
                     pregunta = preguntaRepo.save(pregunta);
-                    System.out.println("Pregunta guardada: " + pregunta.getId());
+                    log.debug("Pregunta guardada con ID: {}", pregunta.getId());
                     
                     // Guardar respuestas
                     @SuppressWarnings("unchecked")
@@ -351,9 +342,7 @@ public class EvaluacionController {
             @PathVariable Long evaluacionId,
             @RequestBody(required = false) Map<String, Object> request
     ) {
-        System.out.println("=== TEST ENDPOINT LLAMADO ===");
-        System.out.println("Evaluacion ID: " + evaluacionId);
-        System.out.println("Request: " + request);
+        log.info("Test endpoint llamado para evaluación ID: {}", evaluacionId);
         
         Map<String, Object> response = new HashMap<>();
         response.put("mensaje", "Endpoint funcionando");
@@ -371,9 +360,7 @@ public class EvaluacionController {
             @RequestBody Map<String, Object> request
     ) {
         try {
-            System.out.println("=== GUARDANDO RESPUESTA REAL ===");
-            System.out.println("Evaluacion ID: " + evaluacionId);
-            System.out.println("Request: " + request);
+            log.info("Guardando respuesta para evaluación ID: {}", evaluacionId);
             
             // Obtener evaluación
             Evaluacion evaluacion = evaluacionRepo.findById(evaluacionId)
@@ -437,9 +424,8 @@ public class EvaluacionController {
             
             evaluacionUsuarioRepo.save(evaluacionUsuario);
             
-            System.out.println("Resultado guardado: Usuario=" + usuarioTemp.getNombre() + 
-                             ", Puntaje=" + puntajeObtenido + "/" + puntajeMaximo + 
-                             ", Aprobado=" + aprobado);
+            log.info("Resultado guardado - Usuario: {}, Puntaje: {}/{}, Aprobado: {}", 
+                     usuarioTemp.getNombre(), puntajeObtenido, puntajeMaximo, aprobado);
             
             Map<String, Object> response = new HashMap<>();
             response.put("aprobado", aprobado);
@@ -451,8 +437,7 @@ public class EvaluacionController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.err.println("Error guardando respuesta: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error guardando respuesta", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
@@ -468,10 +453,8 @@ public class EvaluacionController {
         try {
             Usuario usuario = getUsuarioAutenticado(authentication);
             
-            System.out.println("=== GUARDANDO RESPUESTAS ===");
-            System.out.println("Usuario: " + usuario.getNombre());
-            System.out.println("Evaluacion ID: " + evaluacionId);
-            System.out.println("Respuestas: " + request.get("respuestas"));
+            log.info("Guardando respuestas - Usuario: {}, Evaluación ID: {}", 
+                     usuario.getNombre(), evaluacionId);
             
             // Obtener evaluación
             Evaluacion evaluacion = evaluacionRepo.findById(evaluacionId)
@@ -531,7 +514,7 @@ public class EvaluacionController {
             
             evaluacionUsuarioRepo.save(evaluacionUsuario);
             
-            System.out.println("Resultado guardado: " + porcentaje + "% - Aprobado: " + aprobado);
+            log.info("Resultado guardado: {}% - Aprobado: {}", porcentaje, aprobado);
             
             // Si aprobó la evaluación, actualizar progreso y verificar si puede generar certificado
             if (aprobado) {
@@ -542,10 +525,10 @@ public class EvaluacionController {
                     // Verificar si puede generar certificado
                     if (progresoService.puedeGenerarCertificado(evaluacion.getCurso().getId(), usuario)) {
                         CertificadoDTO certificado = certificadoService.generarCertificado(evaluacion.getCurso().getId(), usuario);
-                        System.out.println("¡Certificado generado automáticamente! ID: " + certificado.getId());
+                        log.info("Certificado generado automáticamente con ID: {}", certificado.getId());
                     }
                 } catch (Exception e) {
-                    System.err.println("Error generando certificado automático: " + e.getMessage());
+                    log.error("Error generando certificado automático", e);
                     // No fallar la respuesta por error en certificado
                 }
             }
@@ -560,8 +543,7 @@ public class EvaluacionController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.err.println("Error respondiendo evaluación: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error respondiendo evaluación", e);
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
@@ -616,7 +598,7 @@ public class EvaluacionController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.err.println("Error obteniendo evaluaciones pendientes: " + e.getMessage());
+            log.error("Error obteniendo evaluaciones pendientes", e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -716,7 +698,7 @@ public class EvaluacionController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.err.println("Error obteniendo resultados: " + e.getMessage());
+            log.error("Error obteniendo resultados", e);
             return ResponseEntity.badRequest().build();
         }
     }
