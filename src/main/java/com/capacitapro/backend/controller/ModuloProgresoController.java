@@ -29,6 +29,7 @@ public class ModuloProgresoController {
     private final EvaluacionRepository evaluacionRepo;
     private final EvaluacionUsuarioRepository evaluacionUsuarioRepo;
     private final CertificadoService certificadoService;
+    private final com.capacitapro.backend.service.ProgresoService progresoService;
 
     private Usuario getUsuarioAutenticado(Authentication authentication) {
         String correo = authentication.getName();
@@ -740,69 +741,17 @@ public class ModuloProgresoController {
     
     private void actualizarProgresoCurso(Long cursoId, Usuario usuario) {
         try {
-            CursoUsuario cursoUsuario = cursoUsuarioRepo
-                    .findByCursoIdAndUsuarioId(cursoId, usuario.getId())
-                    .orElse(null);
+            System.out.println("=== ACTUALIZANDO PROGRESO CURSO (ModuloProgresoController) ===");
+            System.out.println("CursoId: " + cursoId + ", Usuario: " + usuario.getNombre());
             
-            if (cursoUsuario != null) {
-                // Calcular progreso real basado en módulos
-                List<Modulo> modulos = moduloRepo.findActivosByCursoIdOrderByOrden(cursoId);
-                
-                if (modulos.isEmpty()) {
-                    cursoUsuario.setPorcentajeProgreso(0);
-                    cursoUsuarioRepo.save(cursoUsuario);
-                    return;
-                }
-                
-                // Calcular progreso promedio de todos los módulos
-                double progresoTotal = 0;
-                int modulosConProgreso = 0;
-                
-                for (Modulo modulo : modulos) {
-                    Optional<ModuloProgreso> progresoOpt = moduloProgresoRepo.findByUsuarioAndModulo(usuario, modulo);
-                    if (progresoOpt.isPresent()) {
-                        ModuloProgreso progreso = progresoOpt.get();
-                        progresoTotal += (progreso.getPorcentajeProgreso() != null ? progreso.getPorcentajeProgreso() : 0);
-                        modulosConProgreso++;
-                    }
-                }
-                
-                // Si no hay progreso en ningún módulo, el curso está al 0%
-                int progresoGeneral = 0;
-                if (modulosConProgreso > 0) {
-                    progresoGeneral = (int) Math.round(progresoTotal / modulos.size());
-                }
-                
-                System.out.println("Actualizando progreso del curso " + cursoId + ":");
-                System.out.println("- Total módulos: " + modulos.size());
-                System.out.println("- Módulos con progreso: " + modulosConProgreso);
-                System.out.println("- Progreso total acumulado: " + progresoTotal);
-                System.out.println("- Progreso general calculado: " + progresoGeneral + "%");
-                
-                cursoUsuario.setPorcentajeProgreso(progresoGeneral);
-                
-                // Marcar como completado solo si todos los módulos están al 100%
-                long modulosCompletados = modulos.stream()
-                        .filter(m -> moduloProgresoRepo.findByUsuarioAndModulo(usuario, m)
-                                .map(mp -> mp.getCompletado() != null && mp.getCompletado())
-                                .orElse(false))
-                        .count();
-                
-                if (modulosCompletados == modulos.size() && progresoGeneral >= 100) {
-                    cursoUsuario.completarCurso();
-                    
-                    // Generar certificado automáticamente
-                    try {
-                        certificadoService.generarCertificado(cursoUsuario.getCurso().getId(), usuario);
-                    } catch (Exception e) {
-                        System.err.println("Error generando certificado: " + e.getMessage());
-                    }
-                }
-                
-                cursoUsuarioRepo.save(cursoUsuario);
-            }
+            // Usar ProgresoService para mantener consistencia
+            progresoService.actualizarProgresoCurso(cursoId, usuario);
+            
+            System.out.println("Progreso del curso actualizado usando ProgresoService");
+            
         } catch (Exception e) {
             System.err.println("Error actualizando progreso del curso: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     
