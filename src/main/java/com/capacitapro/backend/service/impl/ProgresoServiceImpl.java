@@ -50,7 +50,7 @@ public class ProgresoServiceImpl implements ProgresoService {
         Long modulosCompletados = moduloProgresoRepository.countCompletadosByUsuarioAndCurso(usuario.getId(), cursoId);
         
         Long totalEvaluaciones = evaluacionRepository.countActivasByCursoId(cursoId);
-        Long evaluacionesAprobadas = evaluacionUsuarioRepository.countAprobadasByUsuarioId(usuario.getId());
+        Long evaluacionesAprobadas = evaluacionUsuarioRepository.countAprobadasByUsuarioAndCurso(usuario.getId(), cursoId);
         
         Integer porcentajeProgreso = calcularPorcentajeProgreso(modulosCompletados, totalModulos, evaluacionesAprobadas, totalEvaluaciones);
         
@@ -133,7 +133,7 @@ public class ProgresoServiceImpl implements ProgresoService {
         Long modulosCompletados = moduloProgresoRepository.countCompletadosByUsuarioAndCurso(usuario.getId(), cursoId);
         
         Long totalEvaluaciones = evaluacionRepository.countActivasByCursoId(cursoId);
-        Long evaluacionesAprobadas = evaluacionUsuarioRepository.countAprobadasByUsuarioId(usuario.getId());
+        Long evaluacionesAprobadas = evaluacionUsuarioRepository.countAprobadasByUsuarioAndCurso(usuario.getId(), cursoId);
         
         Integer porcentajeProgreso = calcularPorcentajeProgreso(modulosCompletados, totalModulos, evaluacionesAprobadas, totalEvaluaciones);
         cursoUsuario.setPorcentajeProgreso(porcentajeProgreso);
@@ -171,7 +171,7 @@ public class ProgresoServiceImpl implements ProgresoService {
             
             // Verificar evaluaciones aprobadas (100% requerido)
             Long totalEvaluaciones = evaluacionRepository.countActivasByCursoId(cursoId);
-            Long evaluacionesAprobadas = evaluacionUsuarioRepository.countAprobadasByUsuarioId(usuario.getId());
+            Long evaluacionesAprobadas = evaluacionUsuarioRepository.countAprobadasByUsuarioAndCurso(usuario.getId(), cursoId);
             boolean todasEvaluacionesAprobadas = totalEvaluaciones == 0 || evaluacionesAprobadas >= totalEvaluaciones;
             
             System.out.println("=== VERIFICACIÓN CERTIFICADO ===");
