@@ -693,6 +693,19 @@ public class ModuloProgresoController {
         }
     }
     
+    @GetMapping("/debug/progreso-curso/{cursoId}")
+    public ResponseEntity<String> debugProgresoCurso(
+            @PathVariable Long cursoId,
+            Authentication authentication) {
+        try {
+            Usuario usuario = getUsuarioAutenticado(authentication);
+            progresoService.debugProgresoCurso(cursoId, usuario);
+            return ResponseEntity.ok("Debug completado - revisar logs del servidor");
+        } catch (Exception e) {
+            return ResponseEntity.ok("Error en debug: " + e.getMessage());
+        }
+    }
+    
     @GetMapping("/debug/evaluaciones/{cursoId}")
     public ResponseEntity<Map<String, Object>> debugEvaluaciones(@PathVariable Long cursoId) {
         try {

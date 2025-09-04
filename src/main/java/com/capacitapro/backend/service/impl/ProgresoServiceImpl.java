@@ -113,6 +113,76 @@ public class ProgresoServiceImpl implements ProgresoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public void debugProgresoCurso(Long cursoId, Usuario usuario) {
+        System.out.println("\n=== DEBUG PROGRESO CURSO DETALLADO ===");
+        System.out.println("CursoId: " + cursoId);
+        System.out.println("Usuario: " + usuario.getNombre() + " (ID: " + usuario.getId() + ")");
+        
+        try {
+            Curso curso = cursoRepository.findById(cursoId)
+                    .orElseThrow(() -> new RuntimeException("Curso no encontrado"));
+            
+            System.out.println("Curso: " + curso.getTitulo());
+            
+            // Contar módulos
+            Long totalModulos = moduloRepository.countActivosByCursoId(cursoId);
+            Long modulosCompletados = moduloProgresoRepository.countCompletadosByUsuarioAndCurso(usuario.getId(), cursoId);
+            
+            System.out.println("MÓDULOS:");
+            System.out.println("  - Total: " + totalModulos);
+            System.out.println("  - Completados: " + modulosCompletados);
+            
+            // Contar evaluaciones con detalle
+            Long totalEvaluaciones = evaluacionRepository.countActivasByCursoId(cursoId);
+            Long evaluacionesAprobadas = evaluacionUsuarioRepository.countAprobadasByUsuarioAndCurso(usuario.getId(), cursoId);
+            
+            System.out.println("EVALUACIONES:");
+            System.out.println("  - Total: " + totalEvaluaciones);
+            System.out.println("  - Aprobadas: " + evaluacionesAprobadas);
+            
+            // Mostrar evaluaciones detalladas
+            List<com.capacitapro.backend.entity.Evaluacion> evaluaciones = evaluacionRepository.findActivasByCursoIdDetailed(cursoId);
+            System.out.println("  - Evaluaciones encontradas:");
+            for (com.capacitapro.backend.entity.Evaluacion eval : evaluaciones) {
+                Optional<com.capacitapro.backend.entity.EvaluacionUsuario> resultado = evaluacionUsuarioRepository.findByUsuarioAndEvaluacion(usuario, eval);
+                boolean aprobada = resultado.map(eu -> Boolean.TRUE.equals(eu.getAprobado())).orElse(false);
+                System.out.println("    * ID: " + eval.getId() + ", Título: " + eval.getTitulo() + ", Aprobada: " + aprobada);
+                if (resultado.isPresent()) {
+                    com.capacitapro.backend.entity.EvaluacionUsuario eu = resultado.get();
+                    System.out.println("      - Puntaje: " + eu.getPuntajeObtenido() + "/" + eu.getPuntajeMaximo());
+                    System.out.println("      - Nota mínima: " + eval.getNotaMinima());
+                }
+            }
+            
+            // Calcular progreso
+            Integer porcentajeProgreso = calcularPorcentajeProgreso(modulosCompletados, totalModulos, evaluacionesAprobadas, totalEvaluaciones);
+            System.out.println("PROGRESO CALCULADO: " + porcentajeProgreso + "%");
+            
+            // Verificar si puede generar certificado
+            boolean puedeGenerar = puedeGenerarCertificado(cursoId, usuario);
+            System.out.println("PUEDE GENERAR CERTIFICADO: " + puedeGenerar);
+            
+            // Verificar estado actual en BD
+            CursoUsuario cursoUsuario = cursoUsuarioRepository.findByCursoAndUsuario(curso, usuario).orElse(null);
+            if (cursoUsuario != null) {
+                System.out.println("ESTADO EN BD:");
+                System.out.println("  - Completado: " + cursoUsuario.getCompletado());
+                System.out.println("  - Progreso BD: " + cursoUsuario.getPorcentajeProgreso() + "%");
+                System.out.println("  - Fecha completado: " + cursoUsuario.getFechaCompletado());
+            } else {
+                System.out.println("ESTADO EN BD: No hay registro CursoUsuario");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error en debug: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        System.out.println("=== FIN DEBUG PROGRESO CURSO ===");
+    }
+
+    @Override
     public void actualizarProgresoCurso(Long cursoId, Usuario usuario) {
         Curso curso = cursoRepository.findById(cursoId)
                 .orElseThrow(() -> new RuntimeException("Curso no encontrado"));
@@ -138,18 +208,27 @@ public class ProgresoServiceImpl implements ProgresoService {
         Integer porcentajeProgreso = calcularPorcentajeProgreso(modulosCompletados, totalModulos, evaluacionesAprobadas, totalEvaluaciones);
         cursoUsuario.setPorcentajeProgreso(porcentajeProgreso);
         
-        // Marcar como completado si terminó todo
-        if (porcentajeProgreso >= 100 && !cursoUsuario.getCompletado()) {
+        // CAMBIO CRÍTICO: Marcar como completado solo si REALMENTE está al 100%
+        // Y verificar que puede generar certificado
+        boolean puedeCompletar = porcentajeProgreso >= 100 && puedeGenerarCertificado(cursoId, usuario);
+        
+        if (puedeCompletar && !cursoUsuario.getCompletado()) {
             cursoUsuario.completarCurso();
             
-            // Publicar evento para generar certificado (evita dependencia circular)
-            if (puedeGenerarCertificado(cursoId, usuario)) {
-                eventPublisher.publishEvent(new CursoCompletadoEvent(cursoId, usuario.getId()));
-                System.out.println("✅ Evento de curso completado publicado para " + usuario.getNombre());
-            }
+            // Publicar evento para generar certificado
+            eventPublisher.publishEvent(new CursoCompletadoEvent(cursoId, usuario.getId()));
+            System.out.println("✅ Curso completado y certificado generado para " + usuario.getNombre());
+        } else if (!puedeCompletar && cursoUsuario.getCompletado()) {
+            // Si ya no puede generar certificado, desmarcar como completado
+            cursoUsuario.setCompletado(false);
+            cursoUsuario.setFechaCompletado(null);
+            System.out.println("⚠️ Curso desmarcado como completado para " + usuario.getNombre() + " - no cumple requisitos");
         }
         
         cursoUsuarioRepository.save(cursoUsuario);
+        
+        // Debug automático después de actualizar
+        debugProgresoCurso(cursoId, usuario);
     }
 
     @Override
@@ -196,12 +275,21 @@ public class ProgresoServiceImpl implements ProgresoService {
             return 0;
         }
         
-        double pesoModulos = 0.7; // 70% del progreso
-        double pesoEvaluaciones = 0.3; // 30% del progreso
+        // CAMBIO CRÍTICO: Usar el mismo cálculo que ModuloProgresoController
+        // Contar elementos totales y completados de forma unificada
+        long totalElementos = totalModulos + totalEvaluaciones;
+        long elementosCompletados = modulosCompletados + evaluacionesAprobadas;
         
-        double progresoModulos = totalModulos > 0 ? (modulosCompletados.doubleValue() / totalModulos.doubleValue()) * pesoModulos : 0;
-        double progresoEvaluaciones = totalEvaluaciones > 0 ? (evaluacionesAprobadas.doubleValue() / totalEvaluaciones.doubleValue()) * pesoEvaluaciones : 0;
+        if (totalElementos == 0) {
+            return 0;
+        }
         
-        return (int) Math.round((progresoModulos + progresoEvaluaciones) * 100);
+        // Limitar elementos completados al máximo posible para evitar > 100%
+        elementosCompletados = Math.min(elementosCompletados, totalElementos);
+        
+        int progreso = (int) Math.round((elementosCompletados * 100.0) / totalElementos);
+        
+        // Asegurar que esté en rango válido
+        return Math.max(0, Math.min(100, progreso));
     }
 }

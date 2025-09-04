@@ -15,5 +15,7 @@ public interface ProgresoService {
     
     void actualizarProgresoCurso(Long cursoId, Usuario usuario);
     
+    void debugProgresoCurso(Long cursoId, Usuario usuario);
+    
     boolean puedeGenerarCertificado(Long cursoId, Usuario usuario);
 }
