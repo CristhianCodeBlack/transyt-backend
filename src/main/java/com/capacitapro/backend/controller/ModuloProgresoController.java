@@ -404,6 +404,7 @@ public class ModuloProgresoController {
     }
     
     @PostMapping("/submodulo/{submoduloId}/marcar-visto")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<String> marcarSubmoduloVisto(
             @PathVariable Long submoduloId,
             Authentication authentication) {
@@ -496,7 +497,9 @@ public class ModuloProgresoController {
             System.out.println("  - Porcentaje: " + submoduloProgreso.getPorcentajeProgreso());
             
             SubmoduloProgreso saved = submoduloProgresoRepo.save(submoduloProgreso);
+            submoduloProgresoRepo.flush(); // Forzar escritura inmediata a BD
             System.out.println("PROGRESO GUARDADO CON ID: " + saved.getId());
+            System.out.println("FLUSH EJECUTADO - Datos escritos a BD");
             
             // Obtener o crear progreso del módulo
             ModuloProgreso progreso = moduloProgresoRepo
@@ -523,6 +526,8 @@ public class ModuloProgresoController {
             recalcularProgresoModulo(modulo, usuario, progreso);
             
             moduloProgresoRepo.save(progreso);
+            moduloProgresoRepo.flush(); // Forzar escritura del módulo
+            System.out.println("PROGRESO MÓDULO GUARDADO Y FLUSHED");
             
             // Actualizar progreso del curso
             actualizarProgresoCurso(modulo.getCurso().getId(), usuario);
