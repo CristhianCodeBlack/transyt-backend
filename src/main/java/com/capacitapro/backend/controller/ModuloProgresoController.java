@@ -727,6 +727,91 @@ public class ModuloProgresoController {
         }
     }
     
+    @PostMapping("/video-progreso/{submoduloId}")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<Map<String, Object>> actualizarProgresoVideo(
+            @PathVariable Long submoduloId,
+            @RequestBody Map<String, Object> data,
+            Authentication authentication) {
+        
+        try {
+            System.out.println("=== ACTUALIZANDO PROGRESO DE VIDEO ===");
+            System.out.println("SubmoduloId: " + submoduloId);
+            System.out.println("Data: " + data);
+            
+            Usuario usuario = getUsuarioAutenticado(authentication);
+            Submodulo submodulo = submoduloRepo.findById(submoduloId)
+                    .orElseThrow(() -> new RuntimeException("Submódulo no encontrado"));
+
+            int tiempoVisto = ((Number) data.get("tiempoVisto")).intValue();
+            int duracionTotal = ((Number) data.get("duracionTotal")).intValue();
+            
+            System.out.println("Tiempo visto: " + tiempoVisto + ", Duración total: " + duracionTotal);
+
+            // Obtener o crear progreso
+            SubmoduloProgreso progreso = submoduloProgresoRepo
+                    .findByUsuarioAndSubmodulo(usuario, submodulo)
+                    .orElse(SubmoduloProgreso.builder()
+                            .usuario(usuario)
+                            .submodulo(submodulo)
+                            .fechaInicio(LocalDateTime.now())
+                            .build());
+
+            // Actualizar progreso del video
+            progreso.setTiempoVisto(tiempoVisto);
+            progreso.setDuracionTotal(duracionTotal);
+            
+            // Calcular porcentaje
+            int porcentaje = duracionTotal > 0 ? (tiempoVisto * 100) / duracionTotal : 0;
+            porcentaje = Math.min(porcentaje, 100);
+            progreso.setPorcentajeProgreso(porcentaje);
+            
+            // Marcar como completado si llegó al 90% o más
+            boolean completado = porcentaje >= 90;
+            progreso.setCompletado(completado);
+            
+            if (completado && progreso.getFechaCompletado() == null) {
+                progreso.setFechaCompletado(LocalDateTime.now());
+            }
+            
+            System.out.println("Porcentaje calculado: " + porcentaje + "%, Completado: " + completado);
+            
+            SubmoduloProgreso saved = submoduloProgresoRepo.save(progreso);
+            submoduloProgresoRepo.flush();
+            
+            System.out.println("Progreso guardado con ID: " + saved.getId());
+            
+            // Actualizar progreso del módulo y curso
+            Modulo modulo = submodulo.getModulo();
+            recalcularProgresoModulo(modulo, usuario, 
+                moduloProgresoRepo.findByUsuarioAndModulo(usuario, modulo)
+                    .orElse(ModuloProgreso.builder()
+                            .usuario(usuario)
+                            .modulo(modulo)
+                            .fechaInicio(LocalDateTime.now())
+                            .build()));
+            
+            actualizarProgresoCurso(modulo.getCurso().getId(), usuario);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("porcentajeProgreso", progreso.getPorcentajeProgreso());
+            response.put("completado", progreso.getCompletado());
+            response.put("tiempoVisto", progreso.getTiempoVisto());
+            
+            System.out.println("Respuesta: " + response);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("Error actualizando progreso de video: " + e.getMessage());
+            e.printStackTrace();
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+    
     @GetMapping("/debug/evaluaciones/{cursoId}")
     public ResponseEntity<Map<String, Object>> debugEvaluaciones(@PathVariable Long cursoId) {
         try {
