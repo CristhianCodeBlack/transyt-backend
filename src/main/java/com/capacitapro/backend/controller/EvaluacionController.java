@@ -451,49 +451,80 @@ public class EvaluacionController {
             Authentication authentication
     ) {
         try {
-            Usuario usuario = getUsuarioAutenticado(authentication);
+            log.info("=== INICIANDO RESPUESTA EVALUACIÓN ===");
+            log.info("Evaluación ID: {}", evaluacionId);
+            log.info("Request recibido: {}", request);
             
-            log.info("Guardando respuestas - Usuario: {}, Evaluación ID: {}", 
-                     usuario.getNombre(), evaluacionId);
+            Usuario usuario = null;
+            try {
+                usuario = getUsuarioAutenticado(authentication);
+                log.info("Usuario autenticado: {} ({})", usuario.getNombre(), usuario.getRol());
+            } catch (Exception e) {
+                log.error("Error obteniendo usuario autenticado: {}", e.getMessage());
+                throw new RuntimeException("Error de autenticación: " + e.getMessage());
+            }
             
             // Obtener evaluación
             Evaluacion evaluacion = evaluacionRepo.findById(evaluacionId)
-                    .orElseThrow(() -> new RuntimeException("Evaluación no encontrada"));
+                    .orElseThrow(() -> new RuntimeException("Evaluación no encontrada con ID: " + evaluacionId));
             
-            // Verificar si ya respondió
+            log.info("Evaluación encontrada: {}", evaluacion.getTitulo());
+            
+            // Verificar si ya respondió (permitir múltiples intentos por ahora)
             boolean yaRespondio = evaluacionUsuarioRepo.existsByEvaluacionAndUsuario(evaluacion, usuario);
             if (yaRespondio) {
-                throw new RuntimeException("Ya has respondido esta evaluación");
+                log.warn("Usuario {} ya respondió la evaluación {}, eliminando respuesta anterior", 
+                        usuario.getNombre(), evaluacionId);
+                // Eliminar respuesta anterior para permitir nuevo intento
+                List<EvaluacionUsuario> respuestasAnteriores = evaluacionUsuarioRepo.findByEvaluacionAndUsuario(evaluacion, usuario);
+                evaluacionUsuarioRepo.deleteAll(respuestasAnteriores);
             }
             
             @SuppressWarnings("unchecked")
             Map<String, Object> respuestasMap = (Map<String, Object>) request.get("respuestas");
             
+            log.info("Respuestas recibidas: {}", respuestasMap);
+            
+            if (respuestasMap == null || respuestasMap.isEmpty()) {
+                throw new RuntimeException("No se recibieron respuestas");
+            }
+            
             // Calcular puntaje
             int puntajeObtenido = 0;
             int puntajeMaximo = 0;
+            
+            log.info("Número de preguntas en evaluación: {}", evaluacion.getPreguntas().size());
             
             for (Pregunta pregunta : evaluacion.getPreguntas()) {
                 puntajeMaximo += pregunta.getPuntaje();
                 
                 String preguntaIdStr = pregunta.getId().toString();
+                log.debug("Procesando pregunta ID: {} - Tipo: {}", pregunta.getId(), pregunta.getTipo());
+                
                 if (respuestasMap.containsKey(preguntaIdStr)) {
                     Object respuestaObj = respuestasMap.get(preguntaIdStr);
+                    log.debug("Respuesta para pregunta {}: {}", preguntaIdStr, respuestaObj);
                     
                     if ("texto".equals(pregunta.getTipo())) {
                         // Para preguntas de texto, siempre dar puntos (simplificado)
                         puntajeObtenido += pregunta.getPuntaje();
+                        log.debug("Pregunta de texto - Puntos otorgados: {}", pregunta.getPuntaje());
                     } else {
                         try {
                             Long respuestaSeleccionadaId = Long.parseLong(respuestaObj.toString());
                             Respuesta respuestaSeleccionada = respuestaRepo.findById(respuestaSeleccionadaId).orElse(null);
                             if (respuestaSeleccionada != null && respuestaSeleccionada.getEsCorrecta()) {
                                 puntajeObtenido += pregunta.getPuntaje();
+                                log.debug("Respuesta correcta - Puntos otorgados: {}", pregunta.getPuntaje());
+                            } else {
+                                log.debug("Respuesta incorrecta - Sin puntos");
                             }
                         } catch (NumberFormatException e) {
-                            System.err.println("Error parseando respuesta: " + respuestaObj);
+                            log.error("Error parseando respuesta: {}", respuestaObj, e);
                         }
                     }
+                } else {
+                    log.warn("No se encontró respuesta para pregunta ID: {}", preguntaIdStr);
                 }
             }
             
@@ -514,7 +545,11 @@ public class EvaluacionController {
             
             evaluacionUsuarioRepo.save(evaluacionUsuario);
             
-            log.info("Resultado guardado: {}% - Aprobado: {}", porcentaje, aprobado);
+            log.info("=== RESULTADO CALCULADO ===");
+            log.info("Puntaje obtenido: {}/{}", puntajeObtenido, puntajeMaximo);
+            log.info("Porcentaje: {}%", porcentaje);
+            log.info("Nota mínima: {}%", evaluacion.getNotaMinima());
+            log.info("Aprobado: {}", aprobado);
             
             // Si aprobó la evaluación, actualizar progreso y verificar si puede generar certificado
             if (aprobado) {
@@ -543,9 +578,13 @@ public class EvaluacionController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            log.error("Error respondiendo evaluación", e);
+            log.error("=== ERROR RESPONDIENDO EVALUACIÓN ===");
+            log.error("Evaluación ID: {}", evaluacionId);
+            log.error("Error: {}", e.getMessage(), e);
+            
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
+            errorResponse.put("evaluacionId", evaluacionId);
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }

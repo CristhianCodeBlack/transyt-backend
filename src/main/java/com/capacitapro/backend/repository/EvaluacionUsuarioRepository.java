@@ -32,4 +32,6 @@ public interface EvaluacionUsuarioRepository extends JpaRepository<EvaluacionUsu
     List<EvaluacionUsuario> findByEvaluacionOrderByFechaRealizacionDesc(Evaluacion evaluacion);
     
     List<EvaluacionUsuario> findByUsuarioOrderByFechaRealizacionDesc(Usuario usuario);
+    
+    List<EvaluacionUsuario> findByEvaluacionAndUsuario(Evaluacion evaluacion, Usuario usuario);
 }
