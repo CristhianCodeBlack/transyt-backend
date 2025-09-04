@@ -17,7 +17,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/modulo-progreso")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "https://transyt-frontend.onrender.com"})
+
 public class ModuloProgresoController {
 
     private final ModuloProgresoRepository moduloProgresoRepo;

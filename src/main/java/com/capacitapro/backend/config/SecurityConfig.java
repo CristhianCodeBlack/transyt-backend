@@ -20,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.beans.factory.annotation.Value;
+import java.util.stream.Collectors;
 
 @EnableMethodSecurity
 @Configuration
@@ -73,10 +74,18 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins));
+        
+        // Separar los orígenes por comas y limpiar espacios
+        java.util.List<String> origins = java.util.Arrays.stream(allowedOrigins)
+            .flatMap(origin -> java.util.Arrays.stream(origin.split(",")))
+            .map(String::trim)
+            .collect(java.util.stream.Collectors.toList());
+            
+        configuration.setAllowedOrigins(origins);
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); // Cache preflight por 1 hora
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
