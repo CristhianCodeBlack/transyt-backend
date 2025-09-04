@@ -145,14 +145,27 @@ public class ProgresoServiceImpl implements ProgresoService {
             List<com.capacitapro.backend.entity.Evaluacion> evaluaciones = evaluacionRepository.findActivasByCursoIdDetailed(cursoId);
             System.out.println("  - Evaluaciones encontradas:");
             for (com.capacitapro.backend.entity.Evaluacion eval : evaluaciones) {
-                Optional<com.capacitapro.backend.entity.EvaluacionUsuario> resultado = evaluacionUsuarioRepository.findByUsuarioAndEvaluacion(usuario, eval);
-                boolean aprobada = resultado.map(eu -> Boolean.TRUE.equals(eu.getAprobado())).orElse(false);
+                // Buscar TODOS los intentos de esta evaluación
+                List<com.capacitapro.backend.entity.EvaluacionUsuario> intentos = evaluacionUsuarioRepository.findByEvaluacionAndUsuario(eval, usuario);
+                boolean aprobada = intentos.stream().anyMatch(eu -> Boolean.TRUE.equals(eu.getAprobado()));
+                
                 System.out.println("    * ID: " + eval.getId() + ", Título: " + eval.getTitulo() + ", Aprobada: " + aprobada);
-                if (resultado.isPresent()) {
-                    com.capacitapro.backend.entity.EvaluacionUsuario eu = resultado.get();
-                    System.out.println("      - Puntaje: " + eu.getPuntajeObtenido() + "/" + eu.getPuntajeMaximo());
-                    System.out.println("      - Nota mínima: " + eval.getNotaMinima());
+                System.out.println("      - Módulo: " + (eval.getModulo() != null ? eval.getModulo().getId() : "CURSO"));
+                System.out.println("      - Intentos: " + intentos.size());
+                
+                if (!intentos.isEmpty()) {
+                    for (com.capacitapro.backend.entity.EvaluacionUsuario eu : intentos) {
+                        System.out.println("        > Intento ID: " + eu.getId() + ", Puntaje: " + eu.getPuntajeObtenido() + "/" + eu.getPuntajeMaximo() + ", Aprobado: " + eu.getAprobado());
+                    }
+                    System.out.println("      - Nota mínima requerida: " + eval.getNotaMinima());
                 }
+            }
+            
+            // Verificar evaluaciones aprobadas usando el método del repositorio
+            List<com.capacitapro.backend.entity.EvaluacionUsuario> evaluacionesAprobadasDetalle = evaluacionUsuarioRepository.findAprobadasByUsuarioAndCurso(usuario.getId(), cursoId);
+            System.out.println("  - Evaluaciones aprobadas (repositorio): " + evaluacionesAprobadasDetalle.size());
+            for (com.capacitapro.backend.entity.EvaluacionUsuario eu : evaluacionesAprobadasDetalle) {
+                System.out.println("    * Evaluación ID: " + eu.getEvaluacion().getId() + ", Título: " + eu.getEvaluacion().getTitulo());
             }
             
             // Calcular progreso
