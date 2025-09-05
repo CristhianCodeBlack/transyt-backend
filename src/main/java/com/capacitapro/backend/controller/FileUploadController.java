@@ -67,11 +67,11 @@ public class FileUploadController {
         }
     }
     
-    @PostMapping("/upload-with-progress")
+    @PostMapping("/upload-async-progress")
     @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
-    public ResponseEntity<Map<String, Object>> uploadFileWithProgress(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, Object>> uploadFileAsyncProgress(@RequestParam("file") MultipartFile file) {
         try {
-            System.out.println("🚀 SUBIDA CON PROGRESO INICIADA");
+            System.out.println("🚀 SUBIDA ASÍNCRONA INICIADA");
             
             // Validaciones previas
             Map<String, Object> validation = validateFile(file);
@@ -79,24 +79,33 @@ public class FileUploadController {
                 return ResponseEntity.badRequest().body(validation);
             }
             
-            // Mostrar información del archivo
+            // Generar ID único para seguimiento
+            String uploadId = UUID.randomUUID().toString();
+            
+            System.out.println("🎯 Upload ID: " + uploadId);
             System.out.println("📁 Archivo: " + file.getOriginalFilename());
             System.out.println("📊 Tamaño: " + formatFileSize(file.getSize()));
-            System.out.println("🎥 Tipo: " + file.getContentType());
             
-            // Subir directamente con logs de progreso
-            boolean isProduction = "prod".equals(environment.getProperty("spring.profiles.active"));
+            // Inicializar estado
+            cloudinaryService.initUploadProgress(uploadId, file.getOriginalFilename(), file.getSize());
             
-            if (isProduction) {
-                return uploadToCloudinaryOptimized(file);
-            } else {
-                return uploadToLocal(file);
-            }
+            // Iniciar subida asíncrona
+            cloudinaryService.uploadFileAsyncWithProgress(file, uploadId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("uploadId", uploadId);
+            response.put("status", "uploading");
+            response.put("progress", 0);
+            response.put("message", "Subida iniciada");
+            response.put("filename", file.getOriginalFilename());
+            response.put("size", file.getSize());
+            
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.err.println("❌ Error en subida: " + e.getMessage());
+            System.err.println("❌ Error iniciando subida: " + e.getMessage());
             return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Error en subida: " + e.getMessage()));
+                    .body(Map.of("error", "Error iniciando subida: " + e.getMessage()));
         }
     }
     

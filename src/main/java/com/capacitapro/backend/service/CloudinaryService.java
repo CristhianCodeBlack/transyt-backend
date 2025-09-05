@@ -89,43 +89,88 @@ public class CloudinaryService {
     // MÉTODOS PARA SUBIDA ASÍNCRONA
     private final Map<String, Map<String, Object>> uploadStatus = new java.util.concurrent.ConcurrentHashMap<>();
     
+    public void initUploadProgress(String uploadId, String filename, long fileSize) {
+        Map<String, Object> status = new HashMap<>();
+        status.put("status", "initializing");
+        status.put("progress", 0);
+        status.put("message", "Preparando subida...");
+        status.put("filename", filename);
+        status.put("fileSize", fileSize);
+        status.put("startTime", System.currentTimeMillis());
+        uploadStatus.put(uploadId, status);
+    }
+    
     @org.springframework.scheduling.annotation.Async
-    public void uploadFileAsync(MultipartFile file, String uploadId) {
+    public void uploadFileAsyncWithProgress(MultipartFile file, String uploadId) {
         try {
-            // Actualizar estado inicial
-            Map<String, Object> status = new HashMap<>();
-            status.put("status", "uploading");
-            status.put("progress", 0);
-            status.put("message", "Iniciando subida...");
-            uploadStatus.put(uploadId, status);
+            // Actualizar progreso: Validando
+            updateProgress(uploadId, 10, "Validando archivo...");
+            Thread.sleep(500); // Simular validación
             
-            // Determinar carpeta
+            // Actualizar progreso: Preparando
+            updateProgress(uploadId, 20, "Preparando subida a Cloudinary...");
+            
             String folder = "transyt/" + (file.getContentType().startsWith("video/") ? "videos" : "files");
             
-            // Subir archivo
+            // Actualizar progreso: Subiendo
+            updateProgress(uploadId, 30, "Subiendo a Cloudinary...");
+            
             Map<String, Object> result;
             if (file.getContentType().startsWith("video/")) {
-                result = uploadVideoOptimized(file, folder);
+                result = uploadVideoWithProgress(file, folder, uploadId);
             } else {
-                result = uploadFileOptimized(file, folder);
+                result = uploadFileWithProgress(file, folder, uploadId);
             }
             
-            // Actualizar estado final
+            // Actualizar progreso: Finalizando
+            updateProgress(uploadId, 95, "Finalizando...");
+            Thread.sleep(300);
+            
+            // Completado
+            Map<String, Object> status = uploadStatus.get(uploadId);
             status.put("status", "completed");
             status.put("progress", 100);
-            status.put("message", "Subida completada");
+            status.put("message", "✅ Subida completada exitosamente");
             status.put("url", result.get("secure_url"));
             status.put("public_id", result.get("public_id"));
             
+            long totalTime = System.currentTimeMillis() - (Long) status.get("startTime");
+            status.put("uploadTime", totalTime);
+            
+            System.out.println("✅ Subida completada: " + uploadId + " en " + totalTime + "ms");
+            
         } catch (Exception e) {
-            // Actualizar estado de error
+            System.err.println("❌ Error en subida asíncrona: " + e.getMessage());
             Map<String, Object> status = uploadStatus.get(uploadId);
             if (status == null) status = new HashMap<>();
             status.put("status", "error");
             status.put("progress", 0);
-            status.put("message", "Error: " + e.getMessage());
+            status.put("message", "❌ Error: " + e.getMessage());
             uploadStatus.put(uploadId, status);
         }
+    }
+    
+    private void updateProgress(String uploadId, int progress, String message) {
+        Map<String, Object> status = uploadStatus.get(uploadId);
+        if (status != null) {
+            status.put("progress", progress);
+            status.put("message", message);
+            System.out.println("📊 Progreso " + uploadId + ": " + progress + "% - " + message);
+        }
+    }
+    
+    private Map<String, Object> uploadVideoWithProgress(MultipartFile file, String folder, String uploadId) throws IOException {
+        updateProgress(uploadId, 40, "Procesando video...");
+        Map<String, Object> result = uploadVideoOptimized(file, folder);
+        updateProgress(uploadId, 90, "Video procesado");
+        return result;
+    }
+    
+    private Map<String, Object> uploadFileWithProgress(MultipartFile file, String folder, String uploadId) throws IOException {
+        updateProgress(uploadId, 50, "Procesando archivo...");
+        Map<String, Object> result = uploadFileOptimized(file, folder);
+        updateProgress(uploadId, 90, "Archivo procesado");
+        return result;
     }
     
     public Map<String, Object> getUploadStatus(String uploadId) {
