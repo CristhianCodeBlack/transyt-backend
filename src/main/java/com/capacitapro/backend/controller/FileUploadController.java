@@ -37,8 +37,15 @@ public class FileUploadController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
     public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
-            if (file.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "El archivo está vacío"));
+            System.out.println("=== INICIANDO SUBIDA DE ARCHIVO ===");
+            System.out.println("Archivo: " + file.getOriginalFilename());
+            System.out.println("Tamaño: " + formatFileSize(file.getSize()));
+            System.out.println("Tipo: " + file.getContentType());
+            
+            // Validaciones previas
+            Map<String, Object> validation = validateFile(file);
+            if (validation.containsKey("error")) {
+                return ResponseEntity.badRequest().body(validation);
             }
 
             // Verificar si estamos en producción
@@ -46,27 +53,88 @@ public class FileUploadController {
             
             if (isProduction) {
                 // Usar Cloudinary en producción
-                return uploadToCloudinary(file);
+                return uploadToCloudinaryOptimized(file);
             } else {
                 // Usar almacenamiento local en desarrollo
                 return uploadToLocal(file);
             }
 
         } catch (Exception e) {
+            System.err.println("Error en subida: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "Error al subir el archivo: " + e.getMessage()));
         }
     }
     
-    private ResponseEntity<Map<String, Object>> uploadToCloudinary(MultipartFile file) throws IOException {
+    @PostMapping("/upload-async-progress")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
+    public ResponseEntity<Map<String, Object>> uploadFileAsyncProgress(@RequestParam("file") MultipartFile file) {
+        try {
+            System.out.println("🚀 SUBIDA ASÍNCRONA INICIADA");
+            
+            // Validaciones previas
+            Map<String, Object> validation = validateFile(file);
+            if (validation.containsKey("error")) {
+                return ResponseEntity.badRequest().body(validation);
+            }
+            
+            // Generar ID único para seguimiento
+            String uploadId = UUID.randomUUID().toString();
+            
+            System.out.println("🎯 Upload ID: " + uploadId);
+            System.out.println("📁 Archivo: " + file.getOriginalFilename());
+            System.out.println("📊 Tamaño: " + formatFileSize(file.getSize()));
+            
+            // Inicializar estado
+            cloudinaryService.initUploadProgress(uploadId, file.getOriginalFilename(), file.getSize());
+            
+            // Iniciar subida asíncrona
+            cloudinaryService.uploadFileAsyncWithProgress(file, uploadId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("uploadId", uploadId);
+            response.put("status", "uploading");
+            response.put("progress", 0);
+            response.put("message", "Subida iniciada");
+            response.put("filename", file.getOriginalFilename());
+            response.put("size", file.getSize());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error iniciando subida: " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Error iniciando subida: " + e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/upload-status/{uploadId}")
+    public ResponseEntity<Map<String, Object>> getUploadStatus(@PathVariable String uploadId) {
+        Map<String, Object> status = cloudinaryService.getUploadStatus(uploadId);
+        return ResponseEntity.ok(status);
+    }
+    
+    private ResponseEntity<Map<String, Object>> uploadToCloudinaryOptimized(MultipartFile file) throws IOException {
+        long startTime = System.currentTimeMillis();
+        
         String folder = "transyt/" + (file.getContentType().startsWith("video/") ? "videos" : "files");
+        
+        System.out.println("🌍 Subiendo a Cloudinary - Carpeta: " + folder);
+        System.out.println("⏳ Iniciando subida...");
         
         Map<String, Object> uploadResult;
         if (file.getContentType().startsWith("video/")) {
-            uploadResult = cloudinaryService.uploadVideo(file, folder);
+            uploadResult = cloudinaryService.uploadVideoOptimized(file, folder);
         } else {
-            uploadResult = cloudinaryService.uploadFile(file, folder);
+            uploadResult = cloudinaryService.uploadFileOptimized(file, folder);
         }
+        
+        long uploadTime = System.currentTimeMillis() - startTime;
+        System.out.println("✅ ¡SUBIDA COMPLETADA!");
+        System.out.println("⏱️ Tiempo: " + uploadTime + "ms (" + (uploadTime/1000.0) + "s)");
+        System.out.println("🔗 URL: " + uploadResult.get("secure_url"));
+        System.out.println("🎉 ¡Listo para usar!");
         
         Map<String, Object> response = new HashMap<>();
         response.put("filename", uploadResult.get("public_id"));
@@ -76,8 +144,53 @@ public class FileUploadController {
         response.put("url", uploadResult.get("secure_url"));
         response.put("downloadUrl", uploadResult.get("secure_url"));
         response.put("cloudinary", true);
+        response.put("uploadTime", uploadTime);
+        response.put("optimized", true);
         
         return ResponseEntity.ok(response);
+    }
+    
+    private Map<String, Object> validateFile(MultipartFile file) {
+        Map<String, Object> result = new HashMap<>();
+        
+        if (file.isEmpty()) {
+            result.put("error", "El archivo está vacío");
+            return result;
+        }
+        
+        // Validar tamaño máximo (500MB para videos, 50MB para otros)
+        long maxSize = file.getContentType().startsWith("video/") ? 500L * 1024 * 1024 : 50L * 1024 * 1024;
+        if (file.getSize() > maxSize) {
+            result.put("error", "Archivo demasiado grande. Máximo: " + formatFileSize(maxSize));
+            return result;
+        }
+        
+        // Validar tipos permitidos
+        String contentType = file.getContentType();
+        if (!isAllowedFileType(contentType)) {
+            result.put("error", "Tipo de archivo no permitido: " + contentType);
+            return result;
+        }
+        
+        result.put("valid", true);
+        return result;
+    }
+    
+    private boolean isAllowedFileType(String contentType) {
+        return contentType != null && (
+            contentType.startsWith("video/") ||
+            contentType.startsWith("image/") ||
+            contentType.equals("application/pdf") ||
+            contentType.equals("application/msword") ||
+            contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        );
+    }
+    
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
+        if (bytes < 1024 * 1024 * 1024) return String.format("%.1f MB", bytes / (1024.0 * 1024));
+        return String.format("%.1f GB", bytes / (1024.0 * 1024 * 1024));
     }
     
     private ResponseEntity<Map<String, Object>> uploadToLocal(MultipartFile file) throws IOException {
