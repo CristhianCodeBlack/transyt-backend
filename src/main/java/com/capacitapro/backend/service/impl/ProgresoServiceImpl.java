@@ -247,11 +247,21 @@ public class ProgresoServiceImpl implements ProgresoService {
         if (porcentajeProgreso >= 100 && !cursoUsuario.getCompletado()) {
             cursoUsuario.completarCurso();
             
-            // Publicar evento para generar certificado (evita dependencia circular)
-            if (puedeGenerarCertificado(cursoId, usuario)) {
+            System.out.println("✅ CURSO COMPLETADO AL 100% - Generando certificado automático");
+            System.out.println("Usuario: " + usuario.getNombre());
+            System.out.println("Curso ID: " + cursoId);
+            
+            // SIEMPRE publicar evento para generar certificado automáticamente
+            try {
                 eventPublisher.publishEvent(new CursoCompletadoEvent(cursoId, usuario.getId()));
-                System.out.println("✅ Evento de curso completado publicado para " + usuario.getNombre());
+                System.out.println("✅ Evento de certificado publicado exitosamente");
+            } catch (Exception e) {
+                System.err.println("❌ Error publicando evento de certificado: " + e.getMessage());
             }
+        } else if (porcentajeProgreso >= 100) {
+            System.out.println("⚠️ Curso ya estaba completado - no se publica evento");
+        } else {
+            System.out.println("🔄 Curso aún no completado: " + porcentajeProgreso + "%");
         }
         
         cursoUsuarioRepository.save(cursoUsuario);
