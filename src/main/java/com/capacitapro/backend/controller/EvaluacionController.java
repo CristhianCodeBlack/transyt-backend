@@ -19,12 +19,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import com.capacitapro.backend.util.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/evaluaciones")
 @RequiredArgsConstructor
-@Slf4j
 public class EvaluacionController {
+
+    private static final Logger log = LoggerFactory.getLogger(EvaluacionController.class);
 
     private final EvaluacionService evaluacionService;
     private final UsuarioRepository usuarioRepository;
@@ -337,22 +341,7 @@ public class EvaluacionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevaPregunta);
     }
 
-    @PostMapping("/{evaluacionId}/test")
-    public ResponseEntity<Map<String, Object>> testEndpoint(
-            @PathVariable Long evaluacionId,
-            @RequestBody(required = false) Map<String, Object> request
-    ) {
-        log.info("Test endpoint llamado para evaluación ID: {}", evaluacionId);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("mensaje", "Endpoint funcionando");
-        response.put("evaluacionId", evaluacionId);
-        response.put("aprobado", true);
-        response.put("puntuacion", 95);
-        response.put("notaMinima", 70);
-        
-        return ResponseEntity.ok(response);
-    }
+    // REMOVIDO: Test endpoint no debe existir en producción
     
     @PostMapping("/{evaluacionId}/responder-empleado")
     public ResponseEntity<Map<String, Object>> responderEvaluacionEmpleado(

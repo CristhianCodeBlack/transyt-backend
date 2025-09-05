@@ -13,12 +13,16 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.Map;
+import com.capacitapro.backend.util.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/modulo-progreso")
 @RequiredArgsConstructor
-
 public class ModuloProgresoController {
+
+    private static final Logger log = LoggerFactory.getLogger(ModuloProgresoController.class);
 
     private final ModuloProgresoRepository moduloProgresoRepo;
     private final ModuloRepository moduloRepo;

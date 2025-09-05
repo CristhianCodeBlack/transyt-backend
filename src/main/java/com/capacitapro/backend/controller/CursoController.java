@@ -13,12 +13,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/cursos")
 @RequiredArgsConstructor
-
 public class CursoController {
+
+    private static final Logger log = LoggerFactory.getLogger(CursoController.class);
 
     private final CursoService cursoService;
     private final UsuarioRepository usuarioRepository;
@@ -51,20 +54,18 @@ public class CursoController {
     @PostMapping
     public ResponseEntity<CursoDTO> crearCurso(@Valid @RequestBody CursoDTO cursoDTO, Authentication authentication) {
         try {
-            System.out.println("=== CREAR CURSO ===");
-            System.out.println("CursoDTO recibido: " + cursoDTO);
-            System.out.println("Authentication: " + authentication.getName());
+            log.info("Creando curso: {}", cursoDTO.getTitulo());
+            log.debug("Usuario: {}", authentication.getName());
             
             Usuario usuario = getUsuarioAutenticado(authentication);
-            System.out.println("Usuario autenticado: " + usuario.getNombre() + ", Empresa: " + usuario.getEmpresa().getNombre());
+            log.debug("Usuario autenticado: {}, Empresa: {}", usuario.getNombre(), usuario.getEmpresa().getNombre());
             
             CursoDTO nuevoCurso = cursoService.crearCurso(cursoDTO, usuario);
-            System.out.println("Curso creado exitosamente: " + nuevoCurso.getId());
+            log.info("Curso creado exitosamente con ID: {}", nuevoCurso.getId());
             
             return ResponseEntity.status(HttpStatus.CREATED).body(nuevoCurso);
         } catch (Exception e) {
-            System.err.println("Error al crear curso: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error al crear curso", e);
             throw e;
         }
     }
@@ -76,18 +77,16 @@ public class CursoController {
             Authentication authentication
     ) {
         try {
-            System.out.println("=== ACTUALIZAR CURSO ===");
-            System.out.println("ID: " + id);
-            System.out.println("CursoDTO: " + cursoDTO);
+            log.info("Actualizando curso ID: {}", id);
+            log.debug("Datos del curso: {}", cursoDTO.getTitulo());
             
             Usuario usuario = getUsuarioAutenticado(authentication);
             CursoDTO cursoActualizado = cursoService.actualizarCurso(id, cursoDTO, usuario);
             
-            System.out.println("Curso actualizado exitosamente: " + cursoActualizado.getId());
+            log.info("Curso actualizado exitosamente: {}", cursoActualizado.getId());
             return ResponseEntity.ok(cursoActualizado);
         } catch (Exception e) {
-            System.err.println("Error al actualizar curso: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Error al actualizar curso", e);
             throw e;
         }
     }
