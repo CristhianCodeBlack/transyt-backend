@@ -17,12 +17,15 @@ import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/files")
 @RequiredArgsConstructor
-
 public class FileUploadController {
+
+    private static final Logger log = LoggerFactory.getLogger(FileUploadController.class);
 
     private final CloudinaryService cloudinaryService;
     private final Environment environment;
@@ -240,23 +243,21 @@ public class FileUploadController {
                 return ResponseEntity.badRequest().build();
             }
             
-            System.out.println("=== SERVING FILE ===");
-            System.out.println("Original Filename: " + filename);
-            System.out.println("Sanitized Filename: " + sanitizedFilename);
-            System.out.println("Is Preview: " + isPreview);
-            System.out.println("Upload Dir: " + uploadDir);
+            log.info("Serving file - Original: {}, Sanitized: {}, Preview: {}", 
+                    filename, sanitizedFilename, isPreview);
+            log.debug("Upload directory: {}", uploadDir);
             
             Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
             Path filePath = uploadPath.resolve(sanitizedFilename).normalize();
             
             // SEGURIDAD: Verificar que el archivo esté dentro del directorio permitido
             if (!filePath.startsWith(uploadPath)) {
-                System.err.println("SECURITY: Path traversal attempt blocked: " + filename);
+                log.warn("SECURITY: Path traversal attempt blocked for filename: {}", filename);
                 return ResponseEntity.badRequest().build();
             }
             
-            System.out.println("File Path: " + filePath.toAbsolutePath());
-            System.out.println("File Exists: " + java.nio.file.Files.exists(filePath));
+            log.debug("File path: {}, Exists: {}", 
+                    filePath.toAbsolutePath(), java.nio.file.Files.exists(filePath));
             
             org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(filePath.toUri());
 

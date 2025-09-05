@@ -20,11 +20,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Optional;
 import com.capacitapro.backend.util.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class ProgresoServiceImpl implements ProgresoService {
+
+    private static final Logger log = LoggerFactory.getLogger(ProgresoServiceImpl.class);
 
     private final CursoRepository cursoRepository;
     private final ModuloRepository moduloRepository;
@@ -56,7 +60,8 @@ public class ProgresoServiceImpl implements ProgresoService {
             (int) ((conteo.elementosCompletados * 100) / conteo.totalElementos) : 0;
         porcentajeProgreso = Math.min(porcentajeProgreso, 100);
         
-        System.out.println("=== OBTENIENDO PROGRESO CURSO (ProgresoDTO) ===");
+        log.info("Obteniendo progreso curso - Usuario: {}, Progreso: {}%", 
+                SecurityUtils.sanitizeUsername(usuario.getNombre()), porcentajeProgreso);
         System.out.println("Usuario: " + usuario.getNombre());
         System.out.println("Curso: " + curso.getTitulo());
         System.out.println("Total elementos: " + conteo.totalElementos);
@@ -131,8 +136,8 @@ public class ProgresoServiceImpl implements ProgresoService {
     @Override
     @Transactional(readOnly = true)
     public void debugProgresoCurso(Long cursoId, Usuario usuario) {
-        System.out.println("\n=== DEBUG PROGRESO CURSO DETALLADO ===");
-        System.out.println("CursoId: " + cursoId);
+        log.info("=== DEBUG PROGRESO CURSO DETALLADO ===");
+        log.info("CursoId: {}", SecurityUtils.sanitizeId(cursoId));
         System.out.println("Usuario: " + SecurityUtils.sanitizeUsername(usuario.getNombre()) + " (ID: " + SecurityUtils.sanitizeId(usuario.getId()) + ")");
         
         try {

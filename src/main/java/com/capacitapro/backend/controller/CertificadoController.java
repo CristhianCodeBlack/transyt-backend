@@ -13,12 +13,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/certificados")
 @RequiredArgsConstructor
-
 public class CertificadoController {
+
+    private static final Logger log = LoggerFactory.getLogger(CertificadoController.class);
 
     private final CertificadoRepository certificadoRepo;
     private final UsuarioRepository usuarioRepo;
@@ -36,16 +39,16 @@ public class CertificadoController {
     public ResponseEntity<List<Map<String, Object>>> getTodosCertificados(Authentication authentication) {
         try {
             if (authentication == null || !authentication.isAuthenticated()) {
-                System.err.println("Usuario no autenticado");
+                log.warn("Usuario no autenticado en getTodosCertificados");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
             
             Usuario usuario = getUsuarioAutenticado(authentication);
-            System.out.println("Usuario autenticado: " + usuario.getNombre() + ", Rol: " + usuario.getRol());
+            log.info("Usuario autenticado: {}, Rol: {}", usuario.getNombre(), usuario.getRol());
             
             // Solo admin puede ver todos los certificados
             if (!"ADMIN".equals(usuario.getRol())) {
-                System.err.println("Usuario sin permisos de admin: " + usuario.getRol());
+                log.warn("Usuario sin permisos de admin: {}", usuario.getRol());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
             
@@ -67,7 +70,7 @@ public class CertificadoController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.err.println("Error obteniendo todos los certificados: " + e.getMessage());
+            log.error("Error obteniendo todos los certificados", e);
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ArrayList<>());
         }
@@ -101,7 +104,7 @@ public class CertificadoController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.err.println("Error obteniendo certificados: " + e.getMessage());
+            log.error("Error obteniendo certificados", e);
             e.printStackTrace();
             return ResponseEntity.ok(new ArrayList<>());
         }

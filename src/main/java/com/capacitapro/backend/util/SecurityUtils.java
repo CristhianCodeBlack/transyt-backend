@@ -1,9 +1,14 @@
 package com.capacitapro.backend.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Utilidades de seguridad para sanitizar input y prevenir vulnerabilidades
  */
 public class SecurityUtils {
+    
+    private static final Logger securityLog = LoggerFactory.getLogger("SECURITY");
     
     /**
      * Sanitiza texto para logging seguro, previniendo log injection
@@ -61,5 +66,24 @@ public class SecurityUtils {
         }
         
         return "[INVALID_ID]";
+    }
+    
+    /**
+     * Log de eventos de seguridad
+     * @param event Evento de seguridad
+     * @param details Detalles adicionales
+     */
+    public static void logSecurityEvent(String event, String details) {
+        securityLog.warn("SECURITY EVENT: {} - {}", event, sanitizeForLog(details));
+    }
+    
+    /**
+     * Log de intento de acceso no autorizado
+     * @param username Usuario que intentó el acceso
+     * @param resource Recurso al que intentó acceder
+     */
+    public static void logUnauthorizedAccess(String username, String resource) {
+        securityLog.warn("UNAUTHORIZED ACCESS: User {} attempted to access {}", 
+                sanitizeUsername(username), sanitizeForLog(resource));
     }
 }
