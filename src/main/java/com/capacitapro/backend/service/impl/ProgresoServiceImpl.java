@@ -48,20 +48,33 @@ public class ProgresoServiceImpl implements ProgresoService {
         CursoUsuario cursoUsuario = cursoUsuarioRepository.findByCursoAndUsuario(curso, usuario)
                 .orElse(null);
         
+        // USAR LA MISMA LÓGICA QUE EL PROGRESO GENERAL
+        ConteoProgreso conteo = contarElementosComoProgresoGeneral(cursoId, usuario);
+        
+        Integer porcentajeProgreso = conteo.totalElementos > 0 ? 
+            (int) ((conteo.elementosCompletados * 100) / conteo.totalElementos) : 0;
+        porcentajeProgreso = Math.min(porcentajeProgreso, 100);
+        
+        System.out.println("=== OBTENIENDO PROGRESO CURSO (ProgresoDTO) ===");
+        System.out.println("Usuario: " + usuario.getNombre());
+        System.out.println("Curso: " + curso.getTitulo());
+        System.out.println("Total elementos: " + conteo.totalElementos);
+        System.out.println("Elementos completados: " + conteo.elementosCompletados);
+        System.out.println("Progreso calculado: " + porcentajeProgreso + "%");
+        System.out.println("Completado en BD: " + (cursoUsuario != null ? cursoUsuario.getCompletado() : false));
+        
+        // Para compatibilidad, calcular módulos y evaluaciones por separado
         Long totalModulos = moduloRepository.countActivosByCursoId(cursoId);
         Long modulosCompletados = moduloProgresoRepository.countCompletadosByUsuarioAndCurso(usuario.getId(), cursoId);
-        
         Long totalEvaluaciones = evaluacionRepository.countActivasByCursoId(cursoId);
         Long evaluacionesAprobadas = evaluacionUsuarioRepository.countAprobadasByUsuarioAndCurso(usuario.getId(), cursoId);
-        
-        Integer porcentajeProgreso = calcularPorcentajeProgreso(modulosCompletados, totalModulos, evaluacionesAprobadas, totalEvaluaciones);
         
         return ProgresoDTO.builder()
                 .usuarioId(usuario.getId())
                 .nombreUsuario(usuario.getNombre())
                 .cursoId(cursoId)
                 .nombreCurso(curso.getTitulo())
-                .porcentajeProgreso(porcentajeProgreso)
+                .porcentajeProgreso(porcentajeProgreso) // USAR EL PROGRESO CORRECTO
                 .completado(cursoUsuario != null ? cursoUsuario.getCompletado() : false)
                 .fechaInicio(cursoUsuario != null && cursoUsuario.getFechaInicio() != null ? 
                     cursoUsuario.getFechaInicio().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : null)
