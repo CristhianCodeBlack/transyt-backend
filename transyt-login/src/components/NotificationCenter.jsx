@@ -127,7 +127,7 @@ const NotificationCenter = () => {
                       ) : (
                         <>
                           <WifiOff className="h-4 w-4" />
-                          <span>Sin conexión</span>
+                          <span>Modo offline</span>
                         </>
                       )}
                     </div>

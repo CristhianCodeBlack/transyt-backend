@@ -6,9 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#3b82f6" />
     <meta name="description" content="Plataforma de capacitación empresarial TRANSYT" />
-    <meta name="robots" content="index, follow" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="TRANSYT - Plataforma de Capacitación" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -21,28 +18,15 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
-      // TRANSYT Service Worker - Optimizado para conductores
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', async () => {
-          try {
-            const registration = await navigator.serviceWorker.register('/sw.js');
-            console.log('🚛 TRANSYT SW registered:', registration.scope);
-            
-            // Manejar actualizaciones
-            registration.addEventListener('updatefound', () => {
-              const newWorker = registration.installing;
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('🆕 Nueva versión disponible');
-                  // Auto-actualizar para conductores
-                  window.location.reload();
-                }
-              });
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
             });
-            
-          } catch (error) {
-            console.log('❌ SW registration failed:', error);
-          }
         });
       }
     </script>

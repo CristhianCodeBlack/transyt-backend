@@ -84,9 +84,6 @@ const AppContent = () => {
             } 
           />
           <Route path="/unauthorized" element={<Unauthorized />} />
-          
-          {/* Catch-all route para rutas no encontradas */}
-          <Route path="*" element={<Login />} />
         </Routes>
         <PWAInstallPrompt />
 

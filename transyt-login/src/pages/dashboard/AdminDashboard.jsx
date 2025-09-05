@@ -36,35 +36,21 @@ const AdminDashboard = () => {
   const nombre = localStorage.getItem('nombre');
 
   useEffect(() => {
-    // Solo cargar datos si estamos en el dashboard principal
-    if (activeTab === 'dashboard') {
-      loadDashboardData();
-    } else {
-      setLoading(false);
-    }
-  }, [activeTab]);
+    loadDashboardData();
+  }, []);
 
   const loadDashboardData = async () => {
     try {
-      // Cargar stats primero (más rápido)
-      setLoading(false); // Mostrar UI inmediatamente
-      
-      const statsData = await dashboardService.getAdminStats();
+      const [statsData, activityData] = await Promise.all([
+        dashboardService.getAdminStats(),
+        dashboardService.getRecentActivity()
+      ]);
       setStats(statsData);
-      
-      // Cargar actividad después (menos crítico)
-      setTimeout(async () => {
-        try {
-          const activityData = await dashboardService.getRecentActivity();
-          setRecentActivity(activityData);
-        } catch (error) {
-          console.log('Error cargando actividad:', error);
-        }
-      }, 100);
-      
+      setRecentActivity(activityData);
     } catch (error) {
-      console.log('Error cargando stats:', error);
-      // No mostrar toast para no molestar al usuario
+      toast.error('Error al cargar datos del dashboard');
+    } finally {
+      setLoading(false);
     }
   };
 

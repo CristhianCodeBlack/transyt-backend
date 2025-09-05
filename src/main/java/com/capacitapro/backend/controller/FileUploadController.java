@@ -121,12 +121,27 @@ public class FileUploadController {
     
     private ResponseEntity<org.springframework.core.io.Resource> serveFile(String filename, boolean isPreview) {
         try {
+            // SEGURIDAD: Validar y sanitizar nombre de archivo
+            String sanitizedFilename = sanitizeFilename(filename);
+            if (sanitizedFilename == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
             System.out.println("=== SERVING FILE ===");
-            System.out.println("Filename: " + filename);
+            System.out.println("Original Filename: " + filename);
+            System.out.println("Sanitized Filename: " + sanitizedFilename);
             System.out.println("Is Preview: " + isPreview);
             System.out.println("Upload Dir: " + uploadDir);
             
-            Path filePath = Paths.get(uploadDir).resolve(filename);
+            Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+            Path filePath = uploadPath.resolve(sanitizedFilename).normalize();
+            
+            // SEGURIDAD: Verificar que el archivo esté dentro del directorio permitido
+            if (!filePath.startsWith(uploadPath)) {
+                System.err.println("SECURITY: Path traversal attempt blocked: " + filename);
+                return ResponseEntity.badRequest().build();
+            }
+            
             System.out.println("File Path: " + filePath.toAbsolutePath());
             System.out.println("File Exists: " + java.nio.file.Files.exists(filePath));
             
@@ -161,5 +176,34 @@ public class FileUploadController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+    
+    /**
+     * SEGURIDAD: Sanitiza nombres de archivo para prevenir path traversal
+     */
+    private String sanitizeFilename(String filename) {
+        if (filename == null || filename.trim().isEmpty()) {
+            return null;
+        }
+        
+        // Remover caracteres peligrosos y secuencias de path traversal
+        String sanitized = filename
+                .replaceAll("\\.\\./", "")  // Remover ../
+                .replaceAll("\\.\\.\\\\", "") // Remover ..\\
+                .replaceAll("[<>:\"/\\\\|?*]", "") // Remover caracteres inválidos
+                .replaceAll("\\.\\.", "")  // Remover dobles puntos
+                .trim();
+        
+        // Verificar que no esté vacío después de sanitizar
+        if (sanitized.isEmpty()) {
+            return null;
+        }
+        
+        // Verificar que no sea solo puntos o espacios
+        if (sanitized.matches("^[\\s\\.]+$")) {
+            return null;
+        }
+        
+        return sanitized;
     }
 }

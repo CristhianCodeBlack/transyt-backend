@@ -19,6 +19,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Optional;
+import com.capacitapro.backend.util.SecurityUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -132,7 +133,7 @@ public class ProgresoServiceImpl implements ProgresoService {
     public void debugProgresoCurso(Long cursoId, Usuario usuario) {
         System.out.println("\n=== DEBUG PROGRESO CURSO DETALLADO ===");
         System.out.println("CursoId: " + cursoId);
-        System.out.println("Usuario: " + usuario.getNombre() + " (ID: " + usuario.getId() + ")");
+        System.out.println("Usuario: " + SecurityUtils.sanitizeUsername(usuario.getNombre()) + " (ID: " + SecurityUtils.sanitizeId(usuario.getId()) + ")");
         
         try {
             Curso curso = cursoRepository.findById(cursoId)
