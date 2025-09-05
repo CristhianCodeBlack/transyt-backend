@@ -67,32 +67,36 @@ public class FileUploadController {
         }
     }
     
-    @PostMapping("/upload-async")
+    @PostMapping("/upload-with-progress")
     @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
-    public ResponseEntity<Map<String, Object>> uploadFileAsync(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, Object>> uploadFileWithProgress(@RequestParam("file") MultipartFile file) {
         try {
+            System.out.println("🚀 SUBIDA CON PROGRESO INICIADA");
+            
             // Validaciones previas
             Map<String, Object> validation = validateFile(file);
             if (validation.containsKey("error")) {
                 return ResponseEntity.badRequest().body(validation);
             }
             
-            // Generar ID único para seguimiento
-            String uploadId = UUID.randomUUID().toString();
+            // Mostrar información del archivo
+            System.out.println("📁 Archivo: " + file.getOriginalFilename());
+            System.out.println("📊 Tamaño: " + formatFileSize(file.getSize()));
+            System.out.println("🎥 Tipo: " + file.getContentType());
             
-            // Iniciar subida asíncrona
-            cloudinaryService.uploadFileAsync(file, uploadId);
+            // Subir directamente con logs de progreso
+            boolean isProduction = "prod".equals(environment.getProperty("spring.profiles.active"));
             
-            Map<String, Object> response = new HashMap<>();
-            response.put("uploadId", uploadId);
-            response.put("status", "uploading");
-            response.put("message", "Subida iniciada. Use /upload-status/{uploadId} para verificar progreso");
-            
-            return ResponseEntity.ok(response);
+            if (isProduction) {
+                return uploadToCloudinaryOptimized(file);
+            } else {
+                return uploadToLocal(file);
+            }
             
         } catch (Exception e) {
+            System.err.println("❌ Error en subida: " + e.getMessage());
             return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Error iniciando subida: " + e.getMessage()));
+                    .body(Map.of("error", "Error en subida: " + e.getMessage()));
         }
     }
     
@@ -107,7 +111,8 @@ public class FileUploadController {
         
         String folder = "transyt/" + (file.getContentType().startsWith("video/") ? "videos" : "files");
         
-        System.out.println("Subiendo a Cloudinary - Carpeta: " + folder);
+        System.out.println("🌍 Subiendo a Cloudinary - Carpeta: " + folder);
+        System.out.println("⏳ Iniciando subida...");
         
         Map<String, Object> uploadResult;
         if (file.getContentType().startsWith("video/")) {
@@ -117,8 +122,10 @@ public class FileUploadController {
         }
         
         long uploadTime = System.currentTimeMillis() - startTime;
-        System.out.println("✅ Subida completada en " + uploadTime + "ms");
-        System.out.println("URL: " + uploadResult.get("secure_url"));
+        System.out.println("✅ ¡SUBIDA COMPLETADA!");
+        System.out.println("⏱️ Tiempo: " + uploadTime + "ms (" + (uploadTime/1000.0) + "s)");
+        System.out.println("🔗 URL: " + uploadResult.get("secure_url"));
+        System.out.println("🎉 ¡Listo para usar!");
         
         Map<String, Object> response = new HashMap<>();
         response.put("filename", uploadResult.get("public_id"));

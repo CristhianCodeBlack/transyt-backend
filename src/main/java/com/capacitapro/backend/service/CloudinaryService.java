@@ -49,42 +49,35 @@ public class CloudinaryService {
     
     // MÉTODOS OPTIMIZADOS PARA SUBIDA RÁPIDA
     public Map<String, Object> uploadFileOptimized(MultipartFile file, String folder) throws IOException {
-        System.out.println("Subiendo archivo optimizado: " + file.getOriginalFilename());
+        System.out.println("Subiendo archivo: " + file.getOriginalFilename());
         long startTime = System.currentTimeMillis();
         
         Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
                 "folder", folder,
                 "resource_type", "auto",
-                "quality", "auto:low", // Calidad más baja para subida rápida
-                "fetch_format", "auto",
-                "eager", "c_scale,w_800", // Pre-generar versión optimizada
-                "timeout", 120 // Timeout de 2 minutos
+                "quality", "auto:good", // Mantener buena calidad
+                "fetch_format", "auto"
         ));
         
         long uploadTime = System.currentTimeMillis() - startTime;
-        System.out.println("Archivo subido en " + uploadTime + "ms");
+        System.out.println("✅ Archivo subido en " + uploadTime + "ms");
         
         return result;
     }
 
     public Map<String, Object> uploadVideoOptimized(MultipartFile file, String folder) throws IOException {
-        System.out.println("Subiendo video optimizado: " + file.getOriginalFilename());
+        System.out.println("Subiendo video: " + file.getOriginalFilename());
         long startTime = System.currentTimeMillis();
         
         Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
                 "folder", folder,
                 "resource_type", "video",
-                "quality", "auto:low", // Calidad más baja para subida rápida
-                "format", "mp4",
-                "video_codec", "h264", // Codec eficiente
-                "audio_codec", "aac", // Audio eficiente
-                "bit_rate", "1m", // Bitrate reducido para subida rápida
-                "fps", "24", // FPS estándar
-                "timeout", 300 // Timeout de 5 minutos para videos
+                "quality", "auto:good", // Mantener buena calidad
+                "format", "mp4"
         ));
         
         long uploadTime = System.currentTimeMillis() - startTime;
-        System.out.println("Video subido en " + uploadTime + "ms");
+        System.out.println("✅ Video subido en " + uploadTime + "ms");
         
         return result;
     }
