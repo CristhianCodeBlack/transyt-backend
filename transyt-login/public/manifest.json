@@ -1,12 +1,14 @@
 {
-  "name": "TRANSYT - Plataforma de Capacitación",
+  "name": "TRANSYT - Capacitación para Conductores",
   "short_name": "TRANSYT",
-  "description": "Plataforma de capacitación empresarial TRANSYT",
+  "description": "Plataforma de capacitación empresarial para conductores profesionales",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1e40af",
   "theme_color": "#3b82f6",
   "orientation": "portrait-primary",
+  "scope": "/",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/vite.svg",
@@ -18,10 +20,19 @@
       "src": "/vite.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "maskable"
     }
   ],
-  "categories": ["education", "business"],
+  "categories": ["education", "business", "productivity"],
   "lang": "es",
-  "dir": "ltr"
+  "dir": "ltr",
+  "shortcuts": [
+    {
+      "name": "Mis Cursos",
+      "short_name": "Cursos",
+      "description": "Acceso rápido a mis cursos",
+      "url": "/empleado",
+      "icons": [{ "src": "/vite.svg", "sizes": "96x96" }]
+    }
+  ]
 }

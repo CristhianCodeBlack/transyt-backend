@@ -18,6 +18,7 @@ import {
   Calendar,
   FileText
 } from "lucide-react";
+import { useTranslation } from 'react-i18next';
 import { authService } from "../services/api";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -25,9 +26,11 @@ import logo from "../assets/logo.png";
 import NotificationCenter from "./NotificationCenter";
 import OfflineManager from "./OfflineManager";
 import ThemeToggle from "./ThemeToggle";
+import LanguageSelector from "./LanguageSelector";
 
 
 const Navbar = () => {
+  const { t } = useTranslation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -208,6 +211,9 @@ const Navbar = () => {
 
           {/* Right side - Desktop */}
           <div className="hidden lg:flex items-center gap-2">
+            {/* Language Selector */}
+            <LanguageSelector />
+            
             {/* Theme Toggle */}
             <ThemeToggle />
             
@@ -260,7 +266,7 @@ const Navbar = () => {
                   <button
                     key={item.tab}
                     onClick={() => {
-                      console.log('Navegando a:', item.tab);
+                      console.log('Navegando a:', encodeURIComponent(item.tab));
                       if (window.setAdminTab) {
                         window.setAdminTab(item.tab);
                       }
@@ -355,7 +361,7 @@ const Navbar = () => {
             <div className="p-6 space-y-3">
               <button className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 rounded-lg flex items-center gap-3 transition-colors">
                 <Settings className="h-5 w-5" />
-                <span>Configuración</span>
+                <span>{t('nav.settings')}</span>
               </button>
               
               <button
@@ -366,7 +372,7 @@ const Navbar = () => {
                 className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-3 transition-colors"
               >
                 <LogOut className="h-5 w-5" />
-                <span>Cerrar Sesión</span>
+                <span>{t('nav.logout')}</span>
               </button>
             </div>
           </div>

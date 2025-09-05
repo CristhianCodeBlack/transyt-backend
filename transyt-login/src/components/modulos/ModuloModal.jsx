@@ -13,6 +13,8 @@ const ModuloModal = ({ modulo, cursoId, onClose }) => {
   });
   const [archivo, setArchivo] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('');
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -58,7 +60,7 @@ const ModuloModal = ({ modulo, cursoId, onClose }) => {
         await moduloService.crearModuloTexto(formData);
         toast.success('Módulo de texto creado exitosamente');
       } else {
-        // Crear módulo con archivo
+        // Crear módulo con archivo usando progreso
         const formDataToSend = new FormData();
         formDataToSend.append('titulo', formData.titulo);
         formDataToSend.append('tipo', formData.tipo);
@@ -68,7 +70,13 @@ const ModuloModal = ({ modulo, cursoId, onClose }) => {
           formDataToSend.append('archivo', archivo);
         }
 
-        await moduloService.crearModuloConArchivo(formDataToSend);
+        await moduloService.crearModuloConArchivoConProgreso(
+          formDataToSend, 
+          (progress, status) => {
+            setUploadProgress(progress);
+            setUploadStatus(status);
+          }
+        );
         toast.success(`Módulo con ${formData.tipo.toLowerCase()} creado exitosamente`);
       }
       onClose();
@@ -244,8 +252,9 @@ const ModuloModal = ({ modulo, cursoId, onClose }) => {
                   accept={formData.tipo === 'VIDEO' ? 'video/*' : 'application/pdf'}
                   className="hidden"
                   id="file-upload"
+                  disabled={loading}
                 />
-                <label htmlFor="file-upload" className="cursor-pointer">
+                <label htmlFor="file-upload" className={`cursor-pointer ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                   <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-600">
                     {archivo ? archivo.name : `Seleccionar archivo ${formData.tipo}`}
@@ -255,6 +264,23 @@ const ModuloModal = ({ modulo, cursoId, onClose }) => {
                   </p>
                 </label>
               </div>
+              
+              {/* Barra de progreso */}
+              {loading && uploadProgress > 0 && (
+                <div className="mt-4">
+                  <div className="flex justify-between text-sm text-gray-600 mb-2">
+                    <span>{uploadStatus}</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+              
               {errors.archivo && (
                 <p className="text-red-500 text-sm mt-1">{errors.archivo}</p>
               )}

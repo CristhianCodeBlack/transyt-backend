@@ -11,11 +11,14 @@ export const certificadoService = {
       responseType: 'blob'
     });
     
+    // Sanitizar código de verificación para evitar XSS
+    const safeCodigo = encodeURIComponent(codigoVerificacion || 'certificado');
+    
     // Crear URL para descarga
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `certificado_${codigoVerificacion}.pdf`);
+    link.setAttribute('download', `certificado_${safeCodigo}.pdf`);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -31,7 +34,7 @@ export const certificadosAdminService = {
       console.log('Respuesta certificados:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error obteniendo certificados:', error.response?.status, error.response?.data);
+      console.error('Error obteniendo certificados:', encodeURIComponent(error.response?.status), encodeURIComponent(JSON.stringify(error.response?.data)));
       throw error;
     }
   },
@@ -41,7 +44,7 @@ export const certificadosAdminService = {
       const response = await api.put(`/certificados/admin/${certificadoId}/revocar`);
       return response.data;
     } catch (error) {
-      console.error('Error revocando certificado:', error.response?.status, error.response?.data);
+      console.error('Error revocando certificado:', encodeURIComponent(error.response?.status), encodeURIComponent(JSON.stringify(error.response?.data)));
       throw error;
     }
   },
@@ -51,7 +54,7 @@ export const certificadosAdminService = {
       const response = await api.get('/certificados/debug/auth');
       return response.data;
     } catch (error) {
-      console.error('Error en debug auth:', error);
+      console.error('Error en debug auth:', encodeURIComponent(error.message));
       throw error;
     }
   }
