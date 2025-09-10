@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.annotation.security.PermitAll;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -37,6 +39,7 @@ public class FileUploadController {
     private String baseUrl;
 
     @PostMapping("/upload")
+    @PermitAll
     public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
             System.out.println("=== INICIANDO SUBIDA DE ARCHIVO ===");
@@ -70,6 +73,7 @@ public class FileUploadController {
     }
     
     @PostMapping("/upload-async-progress")
+    @PermitAll
     public ResponseEntity<Map<String, Object>> uploadFileAsyncProgress(@RequestParam("file") MultipartFile file) {
         try {
             System.out.println("🚀 SUBIDA ASÍNCRONA INICIADA");
@@ -111,6 +115,7 @@ public class FileUploadController {
     }
     
     @GetMapping("/upload-status/{uploadId}")
+    @PermitAll
     public ResponseEntity<Map<String, Object>> getUploadStatus(@PathVariable String uploadId) {
         Map<String, Object> status = cloudinaryService.getUploadStatus(uploadId);
         return ResponseEntity.ok(status);
