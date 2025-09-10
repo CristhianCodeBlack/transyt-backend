@@ -40,6 +40,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
@@ -53,6 +55,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/empleado/**").permitAll()
                         .requestMatchers("/api/modulo-progreso/**").permitAll()
                         .requestMatchers("/api/certificados/**").permitAll()
+                        .requestMatchers("/api/cursos/**").permitAll()
+                        .requestMatchers("/api/modulos/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(usuarioService)
