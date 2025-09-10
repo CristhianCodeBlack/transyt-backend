@@ -30,7 +30,7 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final UsuarioServiceImpl usuarioService;
     
-    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://localhost:5175}")
+    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://localhost:5175,https://transyt-frontend.onrender.com}")
     private String[] allowedOrigins;
 
     @Bean
@@ -44,8 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/files/preview/**").permitAll()
-                        .requestMatchers("/api/files/download/**").permitAll()
+                        .requestMatchers("/api/files/**").permitAll()
                         .requestMatchers("/api/evaluaciones/**").permitAll()
                         .requestMatchers("/api/seguimiento-tests/**").permitAll()
                         .requestMatchers("/api/capacitaciones-vivo/**").permitAll()
