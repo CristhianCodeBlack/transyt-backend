@@ -29,7 +29,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getServletPath();
-        if (path.startsWith("/api/auth")) {
+        
+        // Rutas que no requieren autenticación
+        if (path.startsWith("/api/auth") || 
+            path.startsWith("/api/files") ||
+            path.startsWith("/actuator/health") ||
+            path.startsWith("/api/cursos") ||
+            path.startsWith("/api/modulos") ||
+            path.startsWith("/api/evaluaciones") ||
+            path.startsWith("/api/certificados") ||
+            path.startsWith("/api/empleado") ||
+            path.startsWith("/api/reportes") ||
+            path.startsWith("/api/seguimiento-tests") ||
+            path.startsWith("/api/capacitaciones-vivo") ||
+            path.startsWith("/api/instructor-stats") ||
+            path.startsWith("/api/modulo-progreso")) {
             filterChain.doFilter(request, response);
             return;
         }
