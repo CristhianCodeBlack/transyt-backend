@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,7 +37,6 @@ public class FileUploadController {
     private String baseUrl;
 
     @PostMapping("/upload")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
     public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
             System.out.println("=== INICIANDO SUBIDA DE ARCHIVO ===");
@@ -71,7 +70,6 @@ public class FileUploadController {
     }
     
     @PostMapping("/upload-async-progress")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('INSTRUCTOR')")
     public ResponseEntity<Map<String, Object>> uploadFileAsyncProgress(@RequestParam("file") MultipartFile file) {
         try {
             System.out.println("🚀 SUBIDA ASÍNCRONA INICIADA");

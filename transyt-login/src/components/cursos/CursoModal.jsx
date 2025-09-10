@@ -5,6 +5,7 @@ import { usuariosAdminService } from '../../services/dashboardService';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import TestQuestionsModal from './TestQuestionsModal';
+import RealUploadProgress from './RealUploadProgress';
 
 const CursoModal = ({ curso, onClose }) => {
   const [activeTab, setActiveTab] = useState('info');
@@ -24,6 +25,7 @@ const CursoModal = ({ curso, onClose }) => {
   const [selectedTest, setSelectedTest] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [uploadProgress, setUploadProgress] = useState(new Map());
 
   useEffect(() => {
     loadUsuarios();
@@ -358,26 +360,46 @@ const CursoModal = ({ curso, onClose }) => {
   const handleFileUpload = async (moduloId, submoduloId, file) => {
     if (!file) return;
     
-    // Validar tamaño del archivo (500MB máximo)
-    if (file.size > 500 * 1024 * 1024) {
-      toast.error('El archivo es demasiado grande. Máximo 500MB.');
+    // Validar tamaño del archivo
+    const maxSize = file.type.startsWith('video/') ? 500 * 1024 * 1024 : 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      const maxSizeText = file.type.startsWith('video/') ? '500MB' : '50MB';
+      toast.error(`Archivo demasiado grande. Máximo ${maxSizeText} para ${file.type.startsWith('video/') ? 'videos' : 'este tipo de archivo'}.`);
       return;
     }
     
+    const progressKey = `${moduloId}-${submoduloId}`;
+    
+    // Inicializar progreso
+    setUploadProgress(prev => new Map(prev.set(progressKey, {
+      fileName: file.name,
+      fileSize: file.size,
+      progress: 0,
+      status: 'uploading',
+      uploadSpeed: 0,
+      timeRemaining: null
+    })));
+    
     try {
-      // Subir archivo al backend
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await api.post('/files/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const result = await uploadFileWithRealProgress(file, (progressData) => {
+        setUploadProgress(prev => new Map(prev.set(progressKey, {
+          fileName: file.name,
+          fileSize: file.size,
+          ...progressData
+        })));
       });
       
-      const result = response.data;
+      // Completar progreso
+      setUploadProgress(prev => new Map(prev.set(progressKey, {
+        fileName: file.name,
+        fileSize: file.size,
+        progress: 100,
+        status: 'completed',
+        uploadSpeed: 0,
+        timeRemaining: 0
+      })));
       
-      // Guardar la información del archivo en el submódulo
+      // Actualizar submódulo
       updateSubmodulo(moduloId, submoduloId, 'archivo', {
         name: result.originalName,
         filename: result.filename,
@@ -387,11 +409,117 @@ const CursoModal = ({ curso, onClose }) => {
       });
       updateSubmodulo(moduloId, submoduloId, 'contenido', result.url);
       
-      toast.success(`Archivo ${file.name} subido exitosamente`);
+      toast.success('🎉 ¡Archivo subido exitosamente!');
+      
+      // Limpiar progreso después de 3 segundos
+      setTimeout(() => {
+        setUploadProgress(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(progressKey);
+          return newMap;
+        });
+      }, 3000);
+      
     } catch (error) {
       console.error('Error uploading file:', error);
+      
+      // Marcar como error
+      setUploadProgress(prev => new Map(prev.set(progressKey, {
+        fileName: file.name,
+        fileSize: file.size,
+        progress: 0,
+        status: 'error',
+        uploadSpeed: 0,
+        timeRemaining: null
+      })));
+      
       toast.error('Error al subir el archivo');
+      
+      // Limpiar progreso después de 5 segundos
+      setTimeout(() => {
+        setUploadProgress(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(progressKey);
+          return newMap;
+        });
+      }, 5000);
     }
+  };
+  
+  const uploadFileWithRealProgress = (file, onProgress) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      let startTime = Date.now();
+      let lastLoaded = 0;
+      let lastTime = startTime;
+      
+      // Configurar progreso de subida
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const progress = (event.loaded / event.total) * 100;
+          const currentTime = Date.now();
+          const timeDiff = (currentTime - lastTime) / 1000; // segundos
+          const bytesDiff = event.loaded - lastLoaded;
+          
+          // Calcular velocidad (bytes por segundo)
+          const uploadSpeed = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+          
+          // Calcular tiempo restante
+          const remainingBytes = event.total - event.loaded;
+          const timeRemaining = uploadSpeed > 0 ? remainingBytes / uploadSpeed : null;
+          
+          onProgress({
+            progress,
+            status: 'uploading',
+            uploadSpeed,
+            timeRemaining
+          });
+          
+          lastLoaded = event.loaded;
+          lastTime = currentTime;
+        }
+      };
+      
+      // Configurar respuesta
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            resolve(result);
+          } catch (e) {
+            reject(new Error('Error parsing response'));
+          }
+        } else {
+          reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+        }
+      };
+      
+      xhr.onerror = () => {
+        reject(new Error('Network error'));
+      };
+      
+      xhr.ontimeout = () => {
+        reject(new Error('Upload timeout'));
+      };
+      
+      // Configurar request
+      const token = localStorage.getItem('token');
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 
+        (import.meta.env.MODE === 'production' ? 'https://transyt-backend.onrender.com/api' : 'http://localhost:8080/api');
+      
+      xhr.open('POST', `${API_BASE_URL}/files/upload`);
+      xhr.timeout = 600000; // 10 minutos
+      
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      
+      // Iniciar subida
+      xhr.send(formData);
+    });
   };
 
   const removeModulo = (id) => {
@@ -736,6 +864,28 @@ const CursoModal = ({ curso, onClose }) => {
                                     {submodulo.contenido && submodulo.tipo !== 'texto' && (
                                       <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
                                         URL: {submodulo.contenido}
+                                      </div>
+                                    )}
+                                    
+                                    {/* Progreso de subida real */}
+                                    {uploadProgress.has(`${modulo.id}-${submodulo.id}`) && (
+                                      <div className="mt-2">
+                                        <RealUploadProgress
+                                          fileName={uploadProgress.get(`${modulo.id}-${submodulo.id}`).fileName}
+                                          fileSize={uploadProgress.get(`${modulo.id}-${submodulo.id}`).fileSize}
+                                          progress={uploadProgress.get(`${modulo.id}-${submodulo.id}`).progress}
+                                          status={uploadProgress.get(`${modulo.id}-${submodulo.id}`).status}
+                                          uploadSpeed={uploadProgress.get(`${modulo.id}-${submodulo.id}`).uploadSpeed}
+                                          timeRemaining={uploadProgress.get(`${modulo.id}-${submodulo.id}`).timeRemaining}
+                                          onCancel={() => {
+                                            setUploadProgress(prev => {
+                                              const newMap = new Map(prev);
+                                              newMap.delete(`${modulo.id}-${submodulo.id}`);
+                                              return newMap;
+                                            });
+                                            toast('Subida cancelada', { icon: '⏹️' });
+                                          }}
+                                        />
                                       </div>
                                     )}
                                   </div>

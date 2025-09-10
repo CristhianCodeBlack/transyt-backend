@@ -25,15 +25,23 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     
+    // Mostrar toast de carga para cold starts
+    const loadingToast = toast.loading('🔐 Conectando con el servidor...', {
+      duration: 30000 // 30 segundos máximo
+    });
+    
     try {
       const response = await authService.login(formData.correo, formData.clave);
+      
+      // Descartar toast de carga
+      toast.dismiss(loadingToast);
       
       // Guardar datos en localStorage
       localStorage.setItem("token", response.token);
       localStorage.setItem("rol", response.rol);
       localStorage.setItem("nombre", response.nombre);
       
-      toast.success(`¡Bienvenido, ${response.nombre}!`);
+      toast.success(`🎉 ¡Bienvenido, ${response.nombre}!`);
       
       // Redirigir según el rol
       setTimeout(() => {
@@ -43,10 +51,22 @@ const Login = () => {
       }, 1000);
       
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data || 
-                          "Error de conexión. Verifica tus credenciales.";
-      toast.error(errorMessage);
+      // Descartar toast de carga
+      toast.dismiss(loadingToast);
+      
+      let errorMessage = "Error de conexión. Verifica tus credenciales.";
+      
+      if (error.message === 'Servidor no disponible. Intenta de nuevo en unos minutos.') {
+        errorMessage = '⚠️ Servidor temporalmente no disponible. Intenta de nuevo en 1-2 minutos.';
+      } else if (error.message === 'Credenciales incorrectas') {
+        errorMessage = '❌ Correo o contraseña incorrectos.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data) {
+        errorMessage = error.response.data;
+      }
+      
+      toast.error(errorMessage, { duration: 5000 });
     } finally {
       setLoading(false);
     }

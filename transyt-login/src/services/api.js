@@ -12,7 +12,7 @@ console.log('🔧 VITE_API_URL:', import.meta.env.VITE_API_URL);
 // Crear instancia de axios con timeouts optimizados
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000, // 15 segundos máximo
+  timeout: 30000, // 30 segundos para cold starts
   headers: {
     'Content-Type': 'application/json',
   },
@@ -66,17 +66,36 @@ api.interceptors.response.use(
 export const authService = {
   login: async (correo, clave) => {
     try {
-      const response = await api.post('/auth/login', { correo, clave });
+      console.log('🔐 Intentando login...');
+      const response = await api.post('/auth/login', { correo, clave }, { timeout: 30000 });
+      console.log('✅ Login exitoso');
       return response.data;
     } catch (error) {
-      // Si falla, intentar despertar backend y reintentar
-      if (error.code === 'ECONNABORTED' || error.response?.status >= 500) {
-        console.log('🔄 Reintentando login...');
-        await wakeUpBackend();
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const retryResponse = await api.post('/auth/login', { correo, clave });
-        return retryResponse.data;
+      console.log('❌ Error en login:', error.message);
+      
+      // Si es timeout o error de servidor, reintentar
+      if (error.code === 'ECONNABORTED' || error.response?.status >= 500 || !error.response) {
+        console.log('🔄 Backend dormido, despertando y reintentando...');
+        
+        try {
+          await wakeUpBackend();
+          await new Promise(resolve => setTimeout(resolve, 3000)); // Esperar 3 segundos
+          
+          console.log('🔄 Segundo intento de login...');
+          const retryResponse = await api.post('/auth/login', { correo, clave }, { timeout: 30000 });
+          console.log('✅ Login exitoso en segundo intento');
+          return retryResponse.data;
+        } catch (retryError) {
+          console.log('❌ Segundo intento falló:', retryError.message);
+          throw new Error('Servidor no disponible. Intenta de nuevo en unos minutos.');
+        }
       }
+      
+      // Si es error de credenciales, lanzar error original
+      if (error.response?.status === 401) {
+        throw new Error('Credenciales incorrectas');
+      }
+      
       throw error;
     }
   },
