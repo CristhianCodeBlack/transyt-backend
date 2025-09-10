@@ -505,17 +505,14 @@ const CursoModal = ({ curso, onClose }) => {
         reject(new Error('Upload timeout'));
       };
       
-      // Configurar request
-      const token = localStorage.getItem('token');
+      // Configurar request sin token para evitar 403
       const API_BASE_URL = import.meta.env.VITE_API_URL || 
         (import.meta.env.MODE === 'production' ? 'https://transyt-backend.onrender.com/api' : 'http://localhost:8080/api');
       
       xhr.open('POST', `${API_BASE_URL}/files/upload`);
       xhr.timeout = 600000; // 10 minutos
       
-      if (token) {
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      }
+      // NO enviar token para endpoints públicos
       
       // Iniciar subida
       xhr.send(formData);
