@@ -1,3 +1,4 @@
+import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Login from "./pages/Login";
@@ -15,10 +16,22 @@ import DragDropProvider from "./components/DragDropProvider";
 import useKeyboardShortcuts from "./hooks/useKeyboardShortcuts";
 import AccessibilityHelper from "./components/AccessibilityHelper";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import { keepAliveService } from "./utils/keepAlive";
 
 
 const AppContent = () => {
   useKeyboardShortcuts();
+  
+  // Inicializar keep-alive si hay token
+  React.useEffect(() => {
+    if (localStorage.getItem('token')) {
+      keepAliveService.start();
+    }
+    
+    return () => {
+      keepAliveService.stop();
+    };
+  }, []);
   
   return (
     <DragDropProvider>

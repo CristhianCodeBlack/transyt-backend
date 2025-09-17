@@ -29,20 +29,45 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getCorreo(), request.getClave())
-        );
+        try {
+            // Validar formato de email
+            if (!request.getCorreo().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                return ResponseEntity.badRequest().body(null);
+            }
+            
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getCorreo(), request.getClave())
+            );
 
-        Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
-                .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
+            Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
+                    .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
 
-        String token = jwtUtil.generateToken(usuario.getCorreo(), usuario.getRol());
+            // Verificar que el usuario esté activo
+            if (!usuario.isActivo()) {
+                return ResponseEntity.status(403).body(null);
+            }
 
-        return ResponseEntity.ok(new LoginResponse(token, usuario.getRol(), usuario.getNombre()));
+            String token = jwtUtil.generateToken(usuario.getCorreo(), usuario.getRol());
+
+            return ResponseEntity.ok(new LoginResponse(token, usuario.getRol(), usuario.getNombre()));
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(401).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(null);
+        }
     }
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
+            // Validaciones de entrada
+            if (!request.getCorreo().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                return ResponseEntity.badRequest().body("Formato de correo inválido");
+            }
+            
+            if (request.getClave().length() < 8) {
+                return ResponseEntity.badRequest().body("La contraseña debe tener al menos 8 caracteres");
+            }
+            
             if (usuarioRepository.findByCorreo(request.getCorreo()).isPresent()) {
                 return ResponseEntity.badRequest().body("Correo ya registrado");
             }
@@ -51,7 +76,7 @@ public class AuthController {
                     .orElse(null);
             
             if (empresa == null) {
-                return ResponseEntity.badRequest().body("Empresa no encontrada con ID: " + request.getEmpresaId());
+                return ResponseEntity.badRequest().body("Empresa no encontrada");
             }
 
             Usuario usuario = new Usuario();
@@ -66,7 +91,8 @@ public class AuthController {
 
             return ResponseEntity.ok("Usuario registrado correctamente");
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error al registrar usuario: " + e.getMessage());
+            // No exponer detalles internos del error
+            return ResponseEntity.status(500).body("Error interno del servidor");
         }
     }
 

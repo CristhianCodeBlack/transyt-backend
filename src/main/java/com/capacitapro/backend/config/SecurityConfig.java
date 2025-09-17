@@ -42,21 +42,31 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/files/**").permitAll()
-                        .requestMatchers("/api/evaluaciones/**").permitAll()
-                        .requestMatchers("/api/seguimiento-tests/**").permitAll()
-                        .requestMatchers("/api/capacitaciones-vivo/**").permitAll()
-                        .requestMatchers("/api/instructor-stats/**").permitAll()
-                        .requestMatchers("/api/reportes/**").permitAll()
-                        .requestMatchers("/api/empleado/**").permitAll()
-                        .requestMatchers("/api/modulo-progreso/**").permitAll()
-                        .requestMatchers("/api/certificados/**").permitAll()
-                        .requestMatchers("/api/cursos/**").permitAll()
-                        .requestMatchers("/api/modulos/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
+                        // Endpoints para empleados autenticados
+                        .requestMatchers(HttpMethod.GET, "/api/cursos/**").hasAnyRole("EMPLEADO", "INSTRUCTOR", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/modulos/**").hasAnyRole("EMPLEADO", "INSTRUCTOR", "ADMIN")
+                        .requestMatchers("/api/empleado/**").hasAnyRole("EMPLEADO", "INSTRUCTOR", "ADMIN")
+                        .requestMatchers("/api/modulo-progreso/**").hasAnyRole("EMPLEADO", "INSTRUCTOR", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/certificados/**").hasAnyRole("EMPLEADO", "INSTRUCTOR", "ADMIN")
+                        // Endpoints para instructores y admins
+                        .requestMatchers("/api/evaluaciones/**").hasAnyRole("INSTRUCTOR", "ADMIN")
+                        .requestMatchers("/api/seguimiento-tests/**").hasAnyRole("INSTRUCTOR", "ADMIN")
+                        .requestMatchers("/api/capacitaciones-vivo/**").hasAnyRole("INSTRUCTOR", "ADMIN")
+                        .requestMatchers("/api/instructor-stats/**").hasAnyRole("INSTRUCTOR", "ADMIN")
+                        // Endpoints solo para admins
+                        .requestMatchers(HttpMethod.POST, "/api/cursos/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/cursos/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/cursos/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/modulos/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/modulos/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/modulos/**").hasRole("ADMIN")
+                        .requestMatchers("/api/reportes/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/certificados/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/certificados/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/certificados/**").hasRole("ADMIN")
+                        .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(usuarioService)
@@ -71,8 +81,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(12); // Aumentar rounds para mayor seguridad
     }
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

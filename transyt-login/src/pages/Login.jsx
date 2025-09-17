@@ -25,15 +25,24 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     
-    // Mostrar toast de carga para cold starts
-    const loadingToast = toast.loading('🔐 Conectando con el servidor...', {
-      duration: 30000 // 30 segundos máximo
+    // Mostrar toast de carga con mensaje dinámico
+    let loadingToast = toast.loading('🔐 Conectando con el servidor...', {
+      duration: 120000 // 2 minutos máximo
     });
+    
+    // Actualizar mensaje después de 15 segundos
+    const messageTimeout = setTimeout(() => {
+      toast.dismiss(loadingToast);
+      loadingToast = toast.loading('⏳ El servidor está iniciando, esto puede tomar hasta 2 minutos...', {
+        duration: 105000
+      });
+    }, 15000);
     
     try {
       const response = await authService.login(formData.correo, formData.clave);
       
-      // Descartar toast de carga
+      // Limpiar timeouts y toasts
+      clearTimeout(messageTimeout);
       toast.dismiss(loadingToast);
       
       // Guardar datos en localStorage
@@ -51,13 +60,14 @@ const Login = () => {
       }, 1000);
       
     } catch (error) {
-      // Descartar toast de carga
+      // Limpiar timeouts y toasts
+      clearTimeout(messageTimeout);
       toast.dismiss(loadingToast);
       
       let errorMessage = "Error de conexión. Verifica tus credenciales.";
       
-      if (error.message === 'Servidor no disponible. Intenta de nuevo en unos minutos.') {
-        errorMessage = '⚠️ Servidor temporalmente no disponible. Intenta de nuevo en 1-2 minutos.';
+      if (error.message.includes('Servidor no disponible')) {
+        errorMessage = '⚠️ El servidor está iniciando. Intenta de nuevo en 2-3 minutos o recarga la página.';
       } else if (error.message === 'Credenciales incorrectas') {
         errorMessage = '❌ Correo o contraseña incorrectos.';
       } else if (error.response?.data?.message) {
@@ -66,7 +76,7 @@ const Login = () => {
         errorMessage = error.response.data;
       }
       
-      toast.error(errorMessage, { duration: 5000 });
+      toast.error(errorMessage, { duration: 8000 });
     } finally {
       setLoading(false);
     }
@@ -185,7 +195,10 @@ const Login = () => {
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
             {loading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span className="text-sm">Conectando...</span>
+              </>
             ) : (
               <>
                 <LogIn className="h-5 w-5" />
@@ -193,6 +206,15 @@ const Login = () => {
               </>
             )}
           </button>
+          
+          {/* Mensaje informativo durante carga */}
+          {loading && (
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300 text-center">
+                🚀 <strong>Primera conexión:</strong> El servidor puede tardar hasta 2 minutos en iniciar.
+              </p>
+            </div>
+          )}
         </form>
 
           {/* Link a registro */}
