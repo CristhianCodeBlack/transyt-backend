@@ -21,12 +21,19 @@ public class CloudinaryService {
             @Value("${cloudinary.api-secret}") String apiSecret,
             @Value("${cloudinary.secure}") boolean secure) {
         
+        System.out.println("🔧 Configurando Cloudinary:");
+        System.out.println("Cloud Name: " + cloudName);
+        System.out.println("API Key: " + apiKey);
+        System.out.println("Secure: " + secure);
+        
         this.cloudinary = new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", cloudName,
                 "api_key", apiKey,
                 "api_secret", apiSecret,
                 "secure", secure
         ));
+        
+        System.out.println("✅ Cloudinary configurado exitosamente");
     }
 
     public Map<String, Object> uploadFile(MultipartFile file, String folder) throws IOException {
