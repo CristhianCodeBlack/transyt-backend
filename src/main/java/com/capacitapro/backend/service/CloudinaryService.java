@@ -154,7 +154,8 @@ public class CloudinaryService {
                     "quality", "auto:low", // Calidad reducida para ahorrar memoria
                     "format", "mp4",
                     "timeout", 120000, // 2 minutos máximo
-                    "chunk_size", 1000000 // 1MB chunks para plan gratuito
+                    "chunk_size", 1000000, // 1MB chunks para plan gratuito
+                    "eager_async", true // Procesar videos de forma asíncrona
             );
             System.out.println("🔧 Opciones de video configuradas: " + options);
             
