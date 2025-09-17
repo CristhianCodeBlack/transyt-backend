@@ -123,13 +123,15 @@ public class FileUploadController {
             e.printStackTrace();
             return ResponseEntity.status(503).body(Map.of("error", "No se pudo conectar al servicio de almacenamiento"));
             
-        } catch (com.cloudinary.api.ApiException e) {
-            System.err.println("\n💥 ERROR DE API CLOUDINARY:");
-            System.err.println("   ❌ Mensaje: " + e.getMessage());
-            System.err.println("   🔢 Código HTTP: " + e.getHttpCode());
-            System.err.println("   📋 Detalles: " + e.getErrors());
-            e.printStackTrace();
-            return ResponseEntity.status(e.getHttpCode()).body(Map.of("error", "Error de Cloudinary: " + e.getMessage()));
+        } catch (RuntimeException e) {
+            if (e.getMessage() != null && e.getMessage().contains("cloudinary")) {
+                System.err.println("\n💥 ERROR DE API CLOUDINARY:");
+                System.err.println("   ❌ Mensaje: " + e.getMessage());
+                System.err.println("   🔍 Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Ninguna"));
+                e.printStackTrace();
+                return ResponseEntity.status(500).body(Map.of("error", "Error de Cloudinary: " + e.getMessage()));
+            }
+            throw e;
             
         } catch (SecurityException e) {
             System.err.println("\n💥 ERROR DE SEGURIDAD:");
@@ -271,12 +273,13 @@ public class FileUploadController {
             
             return ResponseEntity.ok(response);
             
-        } catch (com.cloudinary.api.ApiException e) {
-            System.err.println("\n💥 ERROR ESPECÍFICO DE CLOUDINARY API:");
-            System.err.println("   ❌ Código HTTP: " + e.getHttpCode());
-            System.err.println("   ❌ Mensaje: " + e.getMessage());
-            System.err.println("   📋 Errores: " + e.getErrors());
-            System.err.println("   🔍 Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Ninguna"));
+        } catch (RuntimeException e) {
+            if (e.getMessage() != null && e.getMessage().contains("cloudinary")) {
+                System.err.println("\n💥 ERROR ESPECÍFICO DE CLOUDINARY API:");
+                System.err.println("   ❌ Mensaje: " + e.getMessage());
+                System.err.println("   🔍 Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Ninguna"));
+                throw new IOException("Error de Cloudinary: " + e.getMessage(), e);
+            }
             throw e;
             
         } catch (java.net.SocketTimeoutException e) {
