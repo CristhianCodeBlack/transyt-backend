@@ -56,8 +56,7 @@ public class CloudinaryService {
                 "quality", "auto:good",
                 "format", "mp4",
                 "timeout", 600000, // 10 minutos timeout para videos
-                "chunk_size", 6000000, // 6MB chunks
-                "eager", "c_scale,w_1280,q_auto:good/mp4" // Optimización automática
+                "chunk_size", 6000000 // 6MB chunks
         );
         
         return cloudinary.uploader().upload(file.getBytes(), options);
@@ -155,8 +154,8 @@ public class CloudinaryService {
                     "quality", "auto:good",
                     "format", "mp4",
                     "timeout", 600000, // 10 minutos para videos
-                    "chunk_size", 6000000,
-                    "eager", "c_scale,w_1280,q_auto:good/mp4"
+                    "chunk_size", 6000000
+                    // Removido eager que causaba ClassCastException
             );
             System.out.println("🔧 Opciones de video configuradas: " + options);
             
