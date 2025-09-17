@@ -148,6 +148,10 @@ public class CloudinaryService {
             System.out.println("✅ Bytes obtenidos: " + fileBytes.length + " (" + (fileBytes.length / (1024.0 * 1024.0)) + " MB)");
             
             // LOG: Configurar opciones para video (optimizado para plan gratuito)
+            java.util.List<String> eagerList = java.util.Arrays.asList(
+                "w_1280,h_720,c_limit,q_auto:good,f_mp4"
+            );
+            
             Map<String, Object> options = ObjectUtils.asMap(
                     "folder", folder,
                     "resource_type", "video",
@@ -155,7 +159,7 @@ public class CloudinaryService {
                     "format", "mp4",
                     "timeout", 120000, // 2 minutos máximo
                     "chunk_size", 1000000, // 1MB chunks para plan gratuito
-                    "eager", "w_1280,h_720,c_limit,q_auto:good,f_mp4", // Transformación como string
+                    "eager", eagerList, // Lista de transformaciones
                     "eager_async", true // Procesar videos de forma asíncrona
             );
             System.out.println("🔧 Opciones de video configuradas: " + options);
