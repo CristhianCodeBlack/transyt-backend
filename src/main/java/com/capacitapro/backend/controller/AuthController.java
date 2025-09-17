@@ -43,7 +43,7 @@ public class AuthController {
                     .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
 
             // Verificar que el usuario esté activo
-            if (!usuario.isActivo()) {
+            if (usuario.getActivo() == null || !usuario.getActivo()) {
                 return ResponseEntity.status(403).body(null);
             }
 
