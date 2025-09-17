@@ -83,14 +83,14 @@ public class CloudinaryService {
             byte[] fileBytes = file.getBytes();
             System.out.println("✅ Bytes obtenidos: " + fileBytes.length);
             
-            // LOG: Configurar opciones
+            // LOG: Configurar opciones (optimizado para plan gratuito)
             Map<String, Object> options = ObjectUtils.asMap(
                     "folder", folder,
                     "resource_type", "auto",
-                    "quality", "auto:good",
+                    "quality", "auto:low", // Calidad reducida
                     "fetch_format", "auto",
-                    "timeout", 300000,
-                    "chunk_size", 6000000
+                    "timeout", 120000, // 2 minutos
+                    "chunk_size", 1000000 // 1MB chunks
             );
             System.out.println("🔧 Opciones configuradas: " + options);
             
@@ -147,15 +147,14 @@ public class CloudinaryService {
             byte[] fileBytes = file.getBytes();
             System.out.println("✅ Bytes obtenidos: " + fileBytes.length + " (" + (fileBytes.length / (1024.0 * 1024.0)) + " MB)");
             
-            // LOG: Configurar opciones para video
+            // LOG: Configurar opciones para video (optimizado para plan gratuito)
             Map<String, Object> options = ObjectUtils.asMap(
                     "folder", folder,
                     "resource_type", "video",
-                    "quality", "auto:good",
+                    "quality", "auto:low", // Calidad reducida para ahorrar memoria
                     "format", "mp4",
-                    "timeout", 600000, // 10 minutos para videos
-                    "chunk_size", 6000000
-                    // Removido eager que causaba ClassCastException
+                    "timeout", 120000, // 2 minutos máximo
+                    "chunk_size", 1000000 // 1MB chunks para plan gratuito
             );
             System.out.println("🔧 Opciones de video configuradas: " + options);
             

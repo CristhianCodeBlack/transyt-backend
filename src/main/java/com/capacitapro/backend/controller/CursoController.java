@@ -28,21 +28,91 @@ public class CursoController {
     private final CursoAdminService cursoAdminService;
 
     private Usuario getUsuarioAutenticado(Authentication authentication) {
-        String correo = authentication.getName();
-        return usuarioRepository.findByCorreo(correo)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        try {
+            System.out.println("🔍 Obteniendo usuario autenticado...");
+            
+            if (authentication == null) {
+                System.err.println("❌ Authentication es NULL");
+                throw new RuntimeException("Authentication es NULL");
+            }
+            
+            String correo = authentication.getName();
+            System.out.println("📧 Correo del usuario: " + correo);
+            
+            if (correo == null || correo.trim().isEmpty()) {
+                System.err.println("❌ Correo es NULL o vacío");
+                throw new RuntimeException("Correo es NULL o vacío");
+            }
+            
+            Usuario usuario = usuarioRepository.findByCorreo(correo)
+                    .orElseThrow(() -> {
+                        System.err.println("❌ Usuario no encontrado con correo: " + correo);
+                        return new RuntimeException("Usuario no encontrado con correo: " + correo);
+                    });
+            
+            System.out.println("✅ Usuario encontrado: " + usuario.getNombre());
+            System.out.println("🆔 Usuario ID: " + usuario.getId());
+            System.out.println("🏢 Empresa: " + (usuario.getEmpresa() != null ? usuario.getEmpresa().getNombre() : "NULL"));
+            
+            return usuario;
+        } catch (Exception e) {
+            System.err.println("❌ Error obteniendo usuario autenticado: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @GetMapping
     public ResponseEntity<List<CursoResponse>> listarCursos(Authentication authentication) {
-        Usuario usuario = getUsuarioAutenticado(authentication);
-        return ResponseEntity.ok(cursoService.listarCursosPorEmpresa(usuario));
+        try {
+            System.out.println("\n📁 === LISTANDO CURSOS ===");
+            System.out.println("👤 Authentication: " + (authentication != null ? authentication.getName() : "NULL"));
+            
+            if (authentication == null) {
+                System.err.println("❌ Authentication es NULL");
+                return ResponseEntity.status(401).body(null);
+            }
+            
+            Usuario usuario = getUsuarioAutenticado(authentication);
+            System.out.println("✅ Usuario autenticado: " + usuario.getNombre());
+            System.out.println("🏢 Empresa: " + (usuario.getEmpresa() != null ? usuario.getEmpresa().getNombre() : "NULL"));
+            
+            List<CursoResponse> cursos = cursoService.listarCursosPorEmpresa(usuario);
+            System.out.println("📊 Total cursos encontrados: " + cursos.size());
+            
+            return ResponseEntity.ok(cursos);
+        } catch (Exception e) {
+            System.err.println("❌ Error en listarCursos: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @GetMapping("/dto")
     public ResponseEntity<List<CursoDTO>> listarCursosDTO(Authentication authentication) {
-        Usuario usuario = getUsuarioAutenticado(authentication);
-        return ResponseEntity.ok(cursoService.listarCursosDTO(usuario.getEmpresa().getId()));
+        try {
+            System.out.println("\n📁 === LISTANDO CURSOS DTO ===");
+            System.out.println("👤 Authentication: " + (authentication != null ? authentication.getName() : "NULL"));
+            
+            if (authentication == null) {
+                System.err.println("❌ Authentication es NULL");
+                return ResponseEntity.status(401).body(null);
+            }
+            
+            Usuario usuario = getUsuarioAutenticado(authentication);
+            System.out.println("✅ Usuario autenticado: " + usuario.getNombre());
+            System.out.println("🏢 Empresa: " + (usuario.getEmpresa() != null ? usuario.getEmpresa().getNombre() : "NULL"));
+            System.out.println("🆔 Empresa ID: " + (usuario.getEmpresa() != null ? usuario.getEmpresa().getId() : "NULL"));
+            
+            List<CursoDTO> cursos = cursoService.listarCursosDTO(usuario.getEmpresa().getId());
+            System.out.println("📊 Total cursos DTO encontrados: " + cursos.size());
+            
+            return ResponseEntity.ok(cursos);
+        } catch (Exception e) {
+            System.err.println("❌ Error en listarCursosDTO: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @GetMapping("/{id}")

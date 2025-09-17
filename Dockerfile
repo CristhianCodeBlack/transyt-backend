@@ -29,7 +29,7 @@ EXPOSE 8080
 
 # Variables de entorno para producción
 ENV SPRING_PROFILES_ACTIVE=prod
-ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+ENV JAVA_OPTS="-Xms128m -Xmx256m -XX:+UseSerialGC -XX:MaxDirectMemorySize=64m"
 
 # Ejecutar aplicación con configuración simplificada
 CMD ["sh", "-c", "echo 'Iniciando aplicación...' && java $JAVA_OPTS -Dserver.port=${PORT:-8080} -Dspring.profiles.active=prod -jar target/backend-0.0.1-SNAPSHOT.jar"]

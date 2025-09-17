@@ -289,10 +289,10 @@ public class FileUploadController {
             return result;
         }
         
-        // Validar tamaño máximo (2GB para videos, 500MB para otros)
-        long maxSize = file.getContentType().startsWith("video/") ? 2L * 1024 * 1024 * 1024 : 500L * 1024 * 1024;
+        // Validar tamaño máximo (50MB para videos, 20MB para otros) - Plan gratuito Render
+        long maxSize = file.getContentType().startsWith("video/") ? 50L * 1024 * 1024 : 20L * 1024 * 1024;
         if (file.getSize() > maxSize) {
-            result.put("error", "Archivo demasiado grande. Máximo: " + formatFileSize(maxSize));
+            result.put("error", "Archivo demasiado grande para plan gratuito. Máximo: " + formatFileSize(maxSize));
             return result;
         }
         
