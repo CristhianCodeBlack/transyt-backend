@@ -65,37 +65,135 @@ public class CloudinaryService {
     
     // MÉTODOS OPTIMIZADOS PARA SUBIDA RÁPIDA
     public Map<String, Object> uploadFileOptimized(MultipartFile file, String folder) throws IOException {
-        System.out.println("Subiendo archivo: " + file.getOriginalFilename());
+        System.out.println("\n📁 ========== CLOUDINARY SERVICE - UPLOAD FILE ===========");
+        System.out.println("📄 Archivo: " + file.getOriginalFilename());
+        System.out.println("📁 Carpeta: " + folder);
+        
         long startTime = System.currentTimeMillis();
         
-        Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                "folder", folder,
-                "resource_type", "auto",
-                "quality", "auto:good", // Mantener buena calidad
-                "fetch_format", "auto"
-        ));
-        
-        long uploadTime = System.currentTimeMillis() - startTime;
-        System.out.println("✅ Archivo subido en " + uploadTime + "ms");
-        
-        return result;
+        try {
+            // LOG: Verificar cloudinary
+            if (cloudinary == null) {
+                System.err.println("❌ Cloudinary instance es NULL!");
+                throw new IOException("Cloudinary no inicializado");
+            }
+            System.out.println("✅ Cloudinary instance disponible");
+            
+            // LOG: Preparar bytes
+            System.out.println("💾 Convirtiendo archivo a bytes...");
+            byte[] fileBytes = file.getBytes();
+            System.out.println("✅ Bytes obtenidos: " + fileBytes.length);
+            
+            // LOG: Configurar opciones
+            Map<String, Object> options = ObjectUtils.asMap(
+                    "folder", folder,
+                    "resource_type", "auto",
+                    "quality", "auto:good",
+                    "fetch_format", "auto",
+                    "timeout", 300000,
+                    "chunk_size", 6000000
+            );
+            System.out.println("🔧 Opciones configuradas: " + options);
+            
+            // LOG: Iniciar subida
+            System.out.println("🚀 Iniciando subida a Cloudinary...");
+            Map<String, Object> result = cloudinary.uploader().upload(fileBytes, options);
+            
+            long uploadTime = System.currentTimeMillis() - startTime;
+            System.out.println("\n✅ ¡ARCHIVO SUBIDO EXITOSAMENTE!");
+            System.out.println("⏱️ Tiempo: " + uploadTime + "ms");
+            System.out.println("🔗 URL: " + result.get("secure_url"));
+            System.out.println("🏷️ Public ID: " + result.get("public_id"));
+            
+            return result;
+            
+        } catch (IOException e) {
+            long failTime = System.currentTimeMillis() - startTime;
+            System.err.println("\n❌ ERROR EN CLOUDINARY SERVICE (IOException):");
+            System.err.println("   ⏱️ Tiempo transcurrido: " + failTime + "ms");
+            System.err.println("   ❌ Mensaje: " + e.getMessage());
+            System.err.println("   🔍 Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Ninguna"));
+            throw e;
+            
+        } catch (Exception e) {
+            long failTime = System.currentTimeMillis() - startTime;
+            System.err.println("\n❌ ERROR INESPERADO EN CLOUDINARY SERVICE:");
+            System.err.println("   ⏱️ Tiempo transcurrido: " + failTime + "ms");
+            System.err.println("   ❌ Tipo: " + e.getClass().getSimpleName());
+            System.err.println("   ❌ Mensaje: " + e.getMessage());
+            System.err.println("   🔍 Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Ninguna"));
+            e.printStackTrace();
+            throw new IOException("Error en Cloudinary: " + e.getMessage(), e);
+        }
     }
 
     public Map<String, Object> uploadVideoOptimized(MultipartFile file, String folder) throws IOException {
-        System.out.println("Subiendo video: " + file.getOriginalFilename());
+        System.out.println("\n🎥 ========== CLOUDINARY SERVICE - UPLOAD VIDEO ===========");
+        System.out.println("🎥 Video: " + file.getOriginalFilename());
+        System.out.println("📁 Carpeta: " + folder);
+        System.out.println("📊 Tamaño: " + (file.getSize() / (1024.0 * 1024.0)) + " MB");
+        
         long startTime = System.currentTimeMillis();
         
-        Map<String, Object> result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                "folder", folder,
-                "resource_type", "video",
-                "quality", "auto:good", // Mantener buena calidad
-                "format", "mp4"
-        ));
-        
-        long uploadTime = System.currentTimeMillis() - startTime;
-        System.out.println("✅ Video subido en " + uploadTime + "ms");
-        
-        return result;
+        try {
+            // LOG: Verificar cloudinary
+            if (cloudinary == null) {
+                System.err.println("❌ Cloudinary instance es NULL!");
+                throw new IOException("Cloudinary no inicializado");
+            }
+            System.out.println("✅ Cloudinary instance disponible");
+            
+            // LOG: Preparar bytes
+            System.out.println("💾 Convirtiendo video a bytes...");
+            byte[] fileBytes = file.getBytes();
+            System.out.println("✅ Bytes obtenidos: " + fileBytes.length + " (" + (fileBytes.length / (1024.0 * 1024.0)) + " MB)");
+            
+            // LOG: Configurar opciones para video
+            Map<String, Object> options = ObjectUtils.asMap(
+                    "folder", folder,
+                    "resource_type", "video",
+                    "quality", "auto:good",
+                    "format", "mp4",
+                    "timeout", 600000, // 10 minutos para videos
+                    "chunk_size", 6000000,
+                    "eager", "c_scale,w_1280,q_auto:good/mp4"
+            );
+            System.out.println("🔧 Opciones de video configuradas: " + options);
+            
+            // LOG: Iniciar subida de video
+            System.out.println("🚀 Iniciando subida de VIDEO a Cloudinary...");
+            System.out.println("⚠️ Esto puede tomar varios minutos para videos grandes...");
+            
+            Map<String, Object> result = cloudinary.uploader().upload(fileBytes, options);
+            
+            long uploadTime = System.currentTimeMillis() - startTime;
+            System.out.println("\n🎉 ¡VIDEO SUBIDO EXITOSAMENTE!");
+            System.out.println("⏱️ Tiempo total: " + uploadTime + "ms (" + (uploadTime/1000.0) + " segundos)");
+            System.out.println("🔗 URL: " + result.get("secure_url"));
+            System.out.println("🏷️ Public ID: " + result.get("public_id"));
+            System.out.println("🎥 Duración: " + result.get("duration") + " segundos");
+            System.out.println("🖼️ Dimensiones: " + result.get("width") + "x" + result.get("height"));
+            
+            return result;
+            
+        } catch (IOException e) {
+            long failTime = System.currentTimeMillis() - startTime;
+            System.err.println("\n❌ ERROR EN SUBIDA DE VIDEO (IOException):");
+            System.err.println("   ⏱️ Tiempo transcurrido: " + failTime + "ms");
+            System.err.println("   ❌ Mensaje: " + e.getMessage());
+            System.err.println("   🔍 Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Ninguna"));
+            throw e;
+            
+        } catch (Exception e) {
+            long failTime = System.currentTimeMillis() - startTime;
+            System.err.println("\n❌ ERROR INESPERADO EN SUBIDA DE VIDEO:");
+            System.err.println("   ⏱️ Tiempo transcurrido: " + failTime + "ms");
+            System.err.println("   ❌ Tipo: " + e.getClass().getSimpleName());
+            System.err.println("   ❌ Mensaje: " + e.getMessage());
+            System.err.println("   🔍 Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Ninguna"));
+            e.printStackTrace();
+            throw new IOException("Error en subida de video: " + e.getMessage(), e);
+        }
     }
 
     public void deleteFile(String publicId) throws IOException {
