@@ -30,21 +30,30 @@ public class CloudinaryService {
     }
 
     public Map<String, Object> uploadFile(MultipartFile file, String folder) throws IOException {
-        return cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+        Map<String, Object> options = ObjectUtils.asMap(
                 "folder", folder,
                 "resource_type", "auto",
                 "quality", "auto:good",
-                "fetch_format", "auto"
-        ));
+                "fetch_format", "auto",
+                "timeout", 300000, // 5 minutos timeout
+                "chunk_size", 6000000 // 6MB chunks para archivos grandes
+        );
+        
+        return cloudinary.uploader().upload(file.getBytes(), options);
     }
 
     public Map<String, Object> uploadVideo(MultipartFile file, String folder) throws IOException {
-        return cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
+        Map<String, Object> options = ObjectUtils.asMap(
                 "folder", folder,
                 "resource_type", "video",
                 "quality", "auto:good",
-                "format", "mp4"
-        ));
+                "format", "mp4",
+                "timeout", 600000, // 10 minutos timeout para videos
+                "chunk_size", 6000000, // 6MB chunks
+                "eager", "c_scale,w_1280,q_auto:good/mp4" // Optimización automática
+        );
+        
+        return cloudinary.uploader().upload(file.getBytes(), options);
     }
     
     // MÉTODOS OPTIMIZADOS PARA SUBIDA RÁPIDA
