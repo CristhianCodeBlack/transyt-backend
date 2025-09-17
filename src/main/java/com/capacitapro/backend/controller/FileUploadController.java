@@ -102,60 +102,34 @@ public class FileUploadController {
             e.printStackTrace();
             return ResponseEntity.status(507).body(Map.of("error", "Archivo demasiado grande para la memoria disponible"));
             
-        } catch (java.io.IOException e) {
-            System.err.println("\n💥 ERROR DE E/S:");
-            System.err.println("   ❌ Mensaje: " + e.getMessage());
-            System.err.println("   🔍 Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Desconocida"));
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().body(Map.of("error", "Error de entrada/salida: " + e.getMessage()));
-            
-        } catch (java.net.SocketTimeoutException e) {
-            System.err.println("\n💥 ERROR DE TIMEOUT:");
-            System.err.println("   ❌ Mensaje: " + e.getMessage());
-            System.err.println("   ⏱️ Tiempo agotado en conexión de red");
-            e.printStackTrace();
-            return ResponseEntity.status(408).body(Map.of("error", "Timeout en la subida. Intenta con un archivo más pequeño."));
-            
-        } catch (java.net.ConnectException e) {
-            System.err.println("\n💥 ERROR DE CONEXIÓN:");
-            System.err.println("   ❌ Mensaje: " + e.getMessage());
-            System.err.println("   🌐 No se pudo conectar a Cloudinary");
-            e.printStackTrace();
-            return ResponseEntity.status(503).body(Map.of("error", "No se pudo conectar al servicio de almacenamiento"));
-            
-        } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().contains("cloudinary")) {
-                System.err.println("\n💥 ERROR DE API CLOUDINARY:");
-                System.err.println("   ❌ Mensaje: " + e.getMessage());
-                System.err.println("   🔍 Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Ninguna"));
-                e.printStackTrace();
-                return ResponseEntity.status(500).body(Map.of("error", "Error de Cloudinary: " + e.getMessage()));
-            }
-            throw e;
-            
-        } catch (SecurityException e) {
-            System.err.println("\n💥 ERROR DE SEGURIDAD:");
-            System.err.println("   ❌ Mensaje: " + e.getMessage());
-            System.err.println("   🔒 Problema de permisos o autenticación");
-            e.printStackTrace();
-            return ResponseEntity.status(403).body(Map.of("error", "Error de seguridad: " + e.getMessage()));
-            
-        } catch (IllegalArgumentException e) {
-            System.err.println("\n💥 ERROR DE ARGUMENTOS:");
-            System.err.println("   ❌ Mensaje: " + e.getMessage());
-            System.err.println("   📝 Parámetros inválidos");
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body(Map.of("error", "Parámetros inválidos: " + e.getMessage()));
-            
         } catch (Exception e) {
-            System.err.println("\n💥 ERROR GENERAL NO CAPTURADO:");
+            System.err.println("\n💥 ERROR EN SUBIDA:");
             System.err.println("   ❌ Tipo: " + e.getClass().getSimpleName());
             System.err.println("   ❌ Mensaje: " + e.getMessage());
-            System.err.println("   🔍 Causa raíz: " + (e.getCause() != null ? e.getCause().getMessage() : "Desconocida"));
-            System.err.println("   📚 Stack trace completo:");
-            e.printStackTrace();
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Error inesperado: " + e.getClass().getSimpleName() + " - " + e.getMessage()));
+            System.err.println("   🔍 Causa: " + (e.getCause() != null ? e.getCause().getMessage() : "Desconocida"));
+            
+            // Determinar tipo de error por mensaje
+            String errorMsg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+            String causeMsg = e.getCause() != null && e.getCause().getMessage() != null ? e.getCause().getMessage().toLowerCase() : "";
+            
+            if (errorMsg.contains("timeout") || causeMsg.contains("timeout")) {
+                System.err.println("   🕰️ DETECTADO: Timeout");
+                return ResponseEntity.status(408).body(Map.of("error", "Timeout en la subida. Intenta con un archivo más pequeño."));
+            } else if (errorMsg.contains("connect") || causeMsg.contains("connect")) {
+                System.err.println("   🌐 DETECTADO: Error de conexión");
+                return ResponseEntity.status(503).body(Map.of("error", "No se pudo conectar al servicio de almacenamiento"));
+            } else if (errorMsg.contains("cloudinary") || causeMsg.contains("cloudinary")) {
+                System.err.println("   ☁️ DETECTADO: Error de Cloudinary");
+                return ResponseEntity.status(500).body(Map.of("error", "Error de Cloudinary: " + e.getMessage()));
+            } else if (errorMsg.contains("security") || causeMsg.contains("security")) {
+                System.err.println("   🔒 DETECTADO: Error de seguridad");
+                return ResponseEntity.status(403).body(Map.of("error", "Error de seguridad: " + e.getMessage()));
+            } else {
+                System.err.println("   ❓ ERROR GENERAL");
+                e.printStackTrace();
+                return ResponseEntity.internalServerError()
+                        .body(Map.of("error", "Error inesperado: " + e.getClass().getSimpleName() + " - " + e.getMessage()));
+            }
         } finally {
             System.out.println("\n🏁 =================== FIN SUBIDA ARCHIVO ===================");
         }
