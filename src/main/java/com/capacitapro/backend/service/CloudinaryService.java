@@ -2,6 +2,7 @@ package com.capacitapro.backend.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.cloudinary.Transformation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -147,7 +148,11 @@ public class CloudinaryService {
             byte[] fileBytes = file.getBytes();
             System.out.println("✅ Bytes obtenidos: " + fileBytes.length + " (" + (fileBytes.length / (1024.0 * 1024.0)) + " MB)");
             
-            // LOG: Configurar opciones para video con eager_async correcto
+            // LOG: Configurar opciones para video con Transformation correcta
+            Transformation transformation = new Transformation()
+                    .quality("auto:low")
+                    .format("mp4");
+            
             Map<String, Object> options = ObjectUtils.asMap(
                     "folder", folder,
                     "resource_type", "video",
@@ -156,9 +161,10 @@ public class CloudinaryService {
                     "timeout", 300000,
                     "chunk_size", 6000000,
                     "eager_async", true, // Requerido para videos grandes
-                    "eager", "q_auto:low/mp4" // Sintaxis string en lugar de HashMap
+                    "eager", java.util.Arrays.asList(transformation) // Usar Transformation correcta
             );
-            System.out.println("🔧 Opciones de video configuradas (eager como string): " + options);
+            System.out.println("🔧 Opciones de video configuradas (con Transformation): " + options);
+            System.out.println("🔧 Transformation: " + transformation.generate());
             
             // LOG: Iniciar subida de video
             System.out.println("🚀 Iniciando subida de VIDEO a Cloudinary...");
