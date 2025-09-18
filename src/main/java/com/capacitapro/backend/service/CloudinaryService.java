@@ -147,17 +147,18 @@ public class CloudinaryService {
             byte[] fileBytes = file.getBytes();
             System.out.println("✅ Bytes obtenidos: " + fileBytes.length + " (" + (fileBytes.length / (1024.0 * 1024.0)) + " MB)");
             
-            // LOG: Configurar opciones para video (sin eager para evitar ClassCastException)
+            // LOG: Configurar opciones para video con eager_async correcto
             Map<String, Object> options = ObjectUtils.asMap(
                     "folder", folder,
                     "resource_type", "video",
-                    "quality", "auto:low", // Calidad baja para evitar problemas
+                    "quality", "auto:low",
                     "format", "mp4",
-                    "timeout", 300000, // 5 minutos
-                    "chunk_size", 6000000 // 6MB chunks
-                    // Removido eager y eager_async que causan ClassCastException
+                    "timeout", 300000,
+                    "chunk_size", 6000000,
+                    "eager_async", true, // Requerido para videos grandes
+                    "eager", "q_auto:low/mp4" // Sintaxis string en lugar de HashMap
             );
-            System.out.println("🔧 Opciones de video configuradas (sin eager): " + options);
+            System.out.println("🔧 Opciones de video configuradas (eager como string): " + options);
             
             // LOG: Iniciar subida de video
             System.out.println("🚀 Iniciando subida de VIDEO a Cloudinary...");
